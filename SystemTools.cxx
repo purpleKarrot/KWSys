@@ -338,10 +338,9 @@ inline void Realpath(const std::string& path, std::string& resolved_path,
                      std::string* errorMessage = nullptr)
 {
   std::wstring tmp = KWSYS_NAMESPACE::Encoding::ToWide(path);
-  wchar_t* ptemp;
   wchar_t fullpath[MAX_PATH];
   DWORD bufferLen = GetFullPathNameW(
-    tmp.c_str(), sizeof(fullpath) / sizeof(fullpath[0]), fullpath, &ptemp);
+    tmp.c_str(), sizeof(fullpath) / sizeof(fullpath[0]), fullpath, nullptr);
   if (bufferLen < sizeof(fullpath) / sizeof(fullpath[0])) {
     resolved_path = KWSYS_NAMESPACE::Encoding::ToNarrow(fullpath);
     KWSYS_NAMESPACE::SystemTools::ConvertToUnixSlashes(resolved_path);
