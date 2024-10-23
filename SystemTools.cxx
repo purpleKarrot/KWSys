@@ -59,9 +59,6 @@
 
 #include <cctype>
 #include <cerrno>
-#ifdef __QNX__
-#  include <malloc.h> /* for malloc/free on QNX */
-#endif
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -824,24 +821,13 @@ static int kwsysUnPutEnv(const std::string& env)
 #elif defined(__CYGWIN__) || defined(__GLIBC__)
 /* putenv("A") removes A from the environment.  It must not put the
    memory in the environment because it does not have any "=" syntax.  */
+
 static int kwsysUnPutEnv(const std::string& env)
 {
   int err = 0;
-  size_t pos = env.find('=');
-  size_t const len = pos == std::string::npos ? env.size() : pos;
-  size_t const sz = len + 1;
-  char local_buf[256];
-  char* buf = sz > sizeof(local_buf) ? (char*)malloc(sz) : local_buf;
-  if (!buf) {
-    return -1;
-  }
-  strncpy(buf, env.c_str(), len);
-  buf[len] = 0;
-  if (putenv(buf) < 0 && errno != EINVAL) {
+  std::string buf = env.substr(0, env.find('='));
+  if (putenv(&buf[0]) < 0 && errno != EINVAL) {
     err = errno;
-  }
-  if (buf != local_buf) {
-    free(buf);
   }
   if (err) {
     errno = err;
