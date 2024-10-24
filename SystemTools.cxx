@@ -3761,6 +3761,15 @@ std::string SystemTools::GetActualCaseForPath(const std::string& p)
 #endif
 }
 
+std::string SystemTools::GetActualCaseForPathCached(const std::string& p)
+{
+#ifdef _WIN32
+  return SystemToolsStatic::GetActualCaseForPathCached(p);
+#else
+  return p;
+#endif
+}
+
 const char* SystemTools::SplitPathRootComponent(const std::string& p,
                                                 std::string* root)
 {
