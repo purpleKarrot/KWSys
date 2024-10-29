@@ -556,9 +556,6 @@ public:
     PathCaseMap;
   std::map<std::string, std::string> EnvMap;
 #endif
-#ifdef __CYGWIN__
-  StringMap Cyg2Win32Map;
-#endif
 
   /**
    * Actual implementation of ReplaceString.
