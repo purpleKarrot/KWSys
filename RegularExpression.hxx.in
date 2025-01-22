@@ -121,6 +121,9 @@ inline std::string::size_type RegularExpressionMatch::end() const
  */
 inline std::string::size_type RegularExpressionMatch::start(int n) const
 {
+  if (!this->startp[n]) {
+    return std::string::npos;
+  }
   return static_cast<std::string::size_type>(this->startp[n] -
                                              this->searchstring);
 }
@@ -131,6 +134,9 @@ inline std::string::size_type RegularExpressionMatch::start(int n) const
  */
 inline std::string::size_type RegularExpressionMatch::end(int n) const
 {
+  if (!this->endp[n]) {
+    return std::string::npos;
+  }
   return static_cast<std::string::size_type>(this->endp[n] -
                                              this->searchstring);
 }
