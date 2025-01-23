@@ -320,7 +320,7 @@ void CommandLineArguments::DeleteRemainingArguments(int argc, char*** argv)
   for (cc = 0; cc < argc; ++cc) {
     delete[] (*argv)[cc];
   }
-  delete[] * argv;
+  delete[] *argv;
 }
 
 void CommandLineArguments::AddCallback(const char* argument,
@@ -634,7 +634,7 @@ void CommandLineArguments::PopulateVariable(double* variable,
 void CommandLineArguments::PopulateVariable(char** variable,
                                             const std::string& value)
 {
-  delete[] * variable;
+  delete[] *variable;
   *variable = new char[value.size() + 1];
   strcpy(*variable, value.c_str());
 }

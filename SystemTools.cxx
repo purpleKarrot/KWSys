@@ -104,7 +104,7 @@
 #  include <windows.h>
 #  include <winioctl.h>
 #  ifndef INVALID_FILE_ATTRIBUTES
-#    define INVALID_FILE_ATTRIBUTES ((DWORD)-1)
+#    define INVALID_FILE_ATTRIBUTES ((DWORD) - 1)
 #  endif
 #  ifndef SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE
 #    define SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE (0x2)

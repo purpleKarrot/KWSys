@@ -4418,7 +4418,7 @@ unsigned char SystemInformationImplementation::GetAPICId()
 #if USE_CPUID
   if (!this->IsSMTSupported()) {
     return static_cast<unsigned char>(-1); // HT not supported
-  }                                        // Logical processor = 1
+  } // Logical processor = 1
   call_cpuid(1, Regs);
 #endif
 
