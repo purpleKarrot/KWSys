@@ -121,8 +121,8 @@ list_files() {
 }
 
 # Transform configured sources to protect @SYMBOLS@.
-list_files | xargs -d '\n' sed -i 's/@\(KWSYS_[A-Z0-9_]\+\)@/x\1x/g'
+list_files | xargs -d '\n' sed -i -b 's/@\(KWSYS_[A-Z0-9_]\+\)@/x\1x/g'
 # Update sources in-place.
 list_files | xargs -d '\n' "$clang_format" -i
 # Transform configured sources to restore @SYMBOLS@.
-list_files | xargs -d '\n' sed -i 's/x\(KWSYS_[A-Z0-9_]\+\)x/@\1@/g'
+list_files | xargs -d '\n' sed -i -b 's/x\(KWSYS_[A-Z0-9_]\+\)x/@\1@/g'
