@@ -386,6 +386,11 @@ public:
    */
   inline void set_invalid();
 
+  /**
+   * The number of capture groups.
+   */
+  inline int num_groups();
+
 private:
   RegularExpressionMatch regmatch;
   char regstart;                  // Internal use only
@@ -394,6 +399,7 @@ private:
   std::string::size_type regmlen; // Internal use only
   char* program;
   int progsize;
+  int regnpar;
 };
 
 /**
@@ -405,6 +411,7 @@ inline RegularExpression::RegularExpression()
   , regmust{}
   , program{ nullptr }
   , progsize{}
+  , regnpar{}
 {
 }
 
@@ -418,6 +425,7 @@ inline RegularExpression::RegularExpression(char const* s)
   , regmust{}
   , program{ nullptr }
   , progsize{}
+  , regnpar{}
 {
   if (s) {
     this->compile(s);
@@ -434,6 +442,7 @@ inline RegularExpression::RegularExpression(std::string const& s)
   , regmust{}
   , program{ nullptr }
   , progsize{}
+  , regnpar{}
 {
   this->compile(s);
 }
@@ -533,6 +542,11 @@ inline void RegularExpression::set_invalid()
   delete[] this->program;
   // #endif
   this->program = nullptr;
+}
+
+inline int RegularExpression::num_groups()
+{
+  return this->regnpar - 1;
 }
 
 } // namespace @KWSYS_NAMESPACE@

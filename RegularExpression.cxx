@@ -60,6 +60,7 @@ RegularExpression::RegularExpression(RegularExpression const& rxp)
   this->regstart = rxp.regstart; // Copy starting index
   this->reganch = rxp.reganch;   // Copy remaining private data
   this->regmlen = rxp.regmlen;   // Copy remaining private data
+  this->regnpar = rxp.regnpar;
 }
 
 // operator= -- Copies the given regular expression.
@@ -93,6 +94,7 @@ RegularExpression& RegularExpression::operator=(RegularExpression const& rxp)
   this->regstart = rxp.regstart; // Copy starting index
   this->reganch = rxp.reganch;   // Copy remaining private data
   this->regmlen = rxp.regmlen;   // Copy remaining private data
+  this->regnpar = rxp.regnpar;
 
   return *this;
 }
@@ -371,6 +373,7 @@ bool RegularExpression::compile(char const* exp)
   // #endif
   this->program = new char[comp.regsize];
   this->progsize = static_cast<int>(comp.regsize);
+  this->regnpar = comp.regnpar;
 
   if (!this->program) {
     // RAISE Error, SYM(RegularExpression), SYM(Out_Of_Memory),
