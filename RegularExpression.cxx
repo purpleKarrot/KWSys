@@ -855,6 +855,7 @@ public:
   char const* regbol;     // Beginning of input, for ^ check.
   char const** regstartp; // Pointer to startp array.
   char const** regendp;   // Ditto for endp.
+  char const* regreject; // Reject matches ending here, for NONEMPTY_AT_OFFSET.
 
   int regtry(char const*, char const**, char const**, char const*);
   int regmatch(char const*);
@@ -865,7 +866,8 @@ public:
 // Returns true if found, and sets start and end indexes accordingly.
 bool RegularExpression::find(char const* string,
                              RegularExpressionMatch& rmatch,
-                             std::string::size_type offset) const
+                             std::string::size_type offset,
+                             unsigned options) const
 {
   char const* s;
 
@@ -897,10 +899,11 @@ bool RegularExpression::find(char const* string,
   }
 
   RegExpFind regFind;
+  s = string + offset;
 
   // Mark beginning of line for ^ .
-  regFind.regbol = string;
-  s = string + offset;
+  regFind.regbol = (options & BOL_AT_OFFSET) ? s : string;
+  regFind.regreject = (options & NONEMPTY_AT_OFFSET) ? s : nullptr;
 
   // Simplest case:  anchored match need be tried only once.
   if (this->reganch)
@@ -1167,7 +1170,9 @@ int RegExpFind::regmatch(char const* prog)
       }
       //              break;
       case END:
-        return (1); // Success!
+        if (reginput == regreject)
+          return (0); // Can't end a match here
+        return (1);   // Success!
 
       default:
         // RAISE Error, SYM(RegularExpression), SYM(Internal_Error),

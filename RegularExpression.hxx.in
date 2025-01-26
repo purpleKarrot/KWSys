@@ -281,6 +281,14 @@ inline std::string RegularExpressionMatch::match(int n) const
 class @KWSYS_NAMESPACE@_EXPORT RegularExpression
 {
 public:
+  enum Options : unsigned
+  {
+    // Match ^ at offset instead of the input start.
+    BOL_AT_OFFSET = 1,
+    // If an empty match is found at offset, continue searching.
+    NONEMPTY_AT_OFFSET = 2,
+  };
+
   /**
    * Instantiate RegularExpression with program=nullptr.
    */
@@ -327,19 +335,21 @@ public:
    * RegularExpressionMatch instances.
    */
   bool find(char const*, RegularExpressionMatch&,
-            std::string::size_type offset = 0) const;
+            std::string::size_type offset = 0, unsigned options = 0) const;
 
   /**
    * Matches the regular expression to the given string.
    * Returns true if found, and sets start and end indexes accordingly.
    */
-  inline bool find(char const*, std::string::size_type offset = 0);
+  inline bool find(char const*, std::string::size_type offset = 0,
+                   unsigned options = 0);
 
   /**
    * Matches the regular expression to the given std string.
    * Returns true if found, and sets start and end indexes accordingly.
    */
-  inline bool find(std::string const&, std::string::size_type offset = 0);
+  inline bool find(std::string const&, std::string::size_type offset = 0,
+                   unsigned options = 0);
 
   /**
    * Match indices
@@ -471,9 +481,10 @@ inline bool RegularExpression::compile(std::string const& s)
  * Returns true if found, and sets start and end indexes accordingly.
  */
 inline bool RegularExpression::find(char const* s,
-                                    std::string::size_type offset)
+                                    std::string::size_type offset,
+                                    unsigned options)
 {
-  return this->find(s, this->regmatch, offset);
+  return this->find(s, this->regmatch, offset, options);
 }
 
 /**
@@ -481,9 +492,10 @@ inline bool RegularExpression::find(char const* s,
  * Returns true if found, and sets start and end indexes accordingly.
  */
 inline bool RegularExpression::find(std::string const& s,
-                                    std::string::size_type offset)
+                                    std::string::size_type offset,
+                                    unsigned options)
 {
-  return this->find(s.c_str(), offset);
+  return this->find(s.c_str(), this->regmatch, offset, options);
 }
 
 /**
