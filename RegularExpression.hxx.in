@@ -42,11 +42,9 @@ public:
   bool isValid() const;
   void clear();
 
-  std::string::size_type start() const;
-  std::string::size_type end() const;
-  std::string::size_type start(int n) const;
-  std::string::size_type end(int n) const;
-  std::string match(int n) const;
+  std::string::size_type start(int n = 0) const;
+  std::string::size_type end(int n = 0) const;
+  std::string match(int n = 0) const;
 
   enum
   {
@@ -97,22 +95,6 @@ inline void RegularExpressionMatch::clear()
   startp[0] = nullptr;
   endp[0] = nullptr;
   searchstring = nullptr;
-}
-
-/**
- * \brief Returns the start index of the full match.
- */
-inline std::string::size_type RegularExpressionMatch::start() const
-{
-  return static_cast<std::string::size_type>(this->startp[0] - searchstring);
-}
-
-/**
- * \brief Returns the end index of the full match.
- */
-inline std::string::size_type RegularExpressionMatch::end() const
-{
-  return static_cast<std::string::size_type>(this->endp[0] - searchstring);
 }
 
 /**
@@ -363,15 +345,13 @@ public:
    * Match indices
    */
   inline RegularExpressionMatch const& regMatch() const;
-  inline std::string::size_type start() const;
-  inline std::string::size_type end() const;
-  inline std::string::size_type start(int n) const;
-  inline std::string::size_type end(int n) const;
+  inline std::string::size_type start(int n = 0) const;
+  inline std::string::size_type end(int n = 0) const;
 
   /**
    * Match strings
    */
-  inline std::string match(int n) const;
+  inline std::string match(int n = 0) const;
 
   /**
    * Copy the given regular expression.
@@ -503,22 +483,6 @@ inline bool RegularExpression::find(std::string const& s,
 inline RegularExpressionMatch const& RegularExpression::regMatch() const
 {
   return this->regmatch;
-}
-
-/**
- * Returns the start index of the full match.
- */
-inline std::string::size_type RegularExpression::start() const
-{
-  return regmatch.start();
-}
-
-/**
- * Returns the end index of the full match.
- */
-inline std::string::size_type RegularExpression::end() const
-{
-  return regmatch.end();
 }
 
 /**
