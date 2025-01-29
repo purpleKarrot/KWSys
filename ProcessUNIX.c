@@ -2629,7 +2629,7 @@ static void kwsysProcessKill(pid_t process_id)
 }
 unsigned long kwsysProcess_GetParentPID(unsigned long process_id)
 {
-  return kwsysGetParentPID((pid_t)process_id);
+  return (unsigned long)kwsysGetParentPID((pid_t)process_id);
 }
 
 static pid_t kwsysGetParentPID(pid_t process_id)
