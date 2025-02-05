@@ -2086,7 +2086,6 @@ void SystemTools::ConvertToUnixSlashes(std::string& path)
     return;
   }
 
-  char const* pathCString = path.c_str();
 #ifdef __VMS
   ConvertVMSToUnix(path);
 #else
@@ -2103,21 +2102,17 @@ void SystemTools::ConvertToUnixSlashes(std::string& path)
 #endif
 
   // if there is a tilda ~ then replace it with HOME
-  pathCString = path.c_str();
-  if (pathCString[0] == '~' &&
-      (pathCString[1] == '/' || pathCString[1] == '\0')) {
+  if (path[0] == '~' && (path[1] == '/' || path[1] == '\0')) {
     std::string homeEnv;
     if (SystemTools::GetEnv("HOME", homeEnv)) {
       path.replace(0, 1, homeEnv);
     }
   }
 #ifdef HAVE_GETPWNAM
-  else if (pathCString[0] == '~') {
-    std::string::size_type idx = path.find_first_of("/\0");
-    char oldch = path[idx];
-    path[idx] = '\0';
-    passwd* pw = getpwnam(path.c_str() + 1);
-    path[idx] = oldch;
+  else if (path[0] == '~') {
+    std::string::size_type idx = path.find('/');
+    std::string user = path.substr(1, idx - 1);
+    passwd* pw = getpwnam(user.c_str());
     if (pw) {
       path.replace(0, idx, pw->pw_dir);
     }

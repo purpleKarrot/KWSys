@@ -67,6 +67,7 @@ static char const* toUnixPaths[][2] = {
   { "\\\\\\triple\\\\back\\\\\\slash\\\\\\", "/triple/back/slash" },
   { "///triple//back///slash///", "/triple/back/slash" },
   { "///////ex treme/////////", "/ex treme" },
+  { "~__nonexistent_username__", "~__nonexistent_username__" },
   { nullptr, nullptr }
 };
 
