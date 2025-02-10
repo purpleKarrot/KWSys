@@ -2425,6 +2425,7 @@ SystemTools::CopyStatus SystemTools::CopyFileContentBlockwise(
  * operating system mechanisms.
  *
  * If available, copy-on-write/clone will be used.
+ * On Windows, the CopyFile() is used for fast copy.
  * On Linux, the FICLONE ioctl is used to create a clone of the source file.
  * On macOS, the copyfile() call is used to make a clone of the file, and
  * it will fall back to a regular copy if that's not possible.
@@ -2444,7 +2445,17 @@ SystemTools::CopyStatus SystemTools::CopyFileContentBlockwise(
 SystemTools::CopyStatus SystemTools::CloneFileContent(
   std::string const& source, std::string const& destination)
 {
-#if defined(__linux) && defined(FICLONE)
+#if defined(_WIN32) && !defined(__CYGWIN__)
+  const BOOL bFailIfExists = FALSE;
+
+  std::wstring sourceWide = Encoding::ToWide(source);
+  std::wstring destinationWide = Encoding::ToWide(destination);
+
+  if (!CopyFileW(sourceWide.c_str(), destinationWide.c_str(), bFailIfExists)) {
+    return CopyStatus{ Status::Windows_GetLastError(), CopyStatus::DestPath };
+  }
+  return CopyStatus{ Status::Success(), CopyStatus::NoPath };
+#elif defined(__linux) && defined(FICLONE)
   int in = open(source.c_str(), O_RDONLY);
   if (in < 0) {
     return CopyStatus{ Status::POSIX_errno(), CopyStatus::SourcePath };
