@@ -88,7 +88,7 @@
 # any outside mailing list and no documentation of the change will be
 # written.
 
-cmake_minimum_required(VERSION 3.9...3.22 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.13...3.31 FATAL_ERROR)
 
 # Some configure checks depend upon the deployment target. Clear checks when
 # the deployment target changes.
