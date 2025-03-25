@@ -317,7 +317,7 @@ endif()
 
 #-----------------------------------------------------------------------------
 # Adjust compiler flags for some platforms.
-if(NOT CMAKE_COMPILER_IS_GNUCXX)
+if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   if(CMAKE_SYSTEM MATCHES "OSF1-V.*")
     string(REGEX MATCH "-timplicit_local"
       KWSYS_CXX_FLAGS_HAVE_IMPLICIT_LOCAL "${CMAKE_CXX_FLAGS}")
