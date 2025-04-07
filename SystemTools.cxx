@@ -3380,33 +3380,6 @@ bool SystemTools::SplitProgramPath(std::string const& in_name,
   return true;
 }
 
-bool SystemTools::FindProgramPath(char const* argv0, std::string& pathOut,
-                                  std::string& errorMsg)
-{
-  std::vector<std::string> failures;
-  std::string self = argv0 ? argv0 : "";
-  failures.push_back(self);
-  SystemTools::ConvertToUnixSlashes(self);
-  self = SystemTools::FindProgram(self);
-  if (!SystemTools::FileIsExecutable(self)) {
-    failures.push_back(self);
-    std::ostringstream msg;
-    msg << "Can not find the command line program ";
-    msg << "\n";
-    if (argv0) {
-      msg << "  argv[0] = \"" << argv0 << "\"\n";
-    }
-    msg << "  Attempted paths:\n";
-    for (std::string const& ff : failures) {
-      msg << "    \"" << ff << "\"\n";
-    }
-    errorMsg = msg.str();
-    return false;
-  }
-  pathOut = self;
-  return true;
-}
-
 static void SystemToolsAppendComponents(
   std::vector<std::string>& out_components,
   std::vector<std::string>::iterator first,
