@@ -2893,17 +2893,6 @@ std::string SystemTools::FindDirectory(
  * the system search path.  Returns the full path to the executable if it is
  * found.  Otherwise, the empty string is returned.
  */
-std::string SystemTools::FindProgram(char const* nameIn,
-                                     std::vector<std::string> const& userPaths,
-                                     bool no_system_path)
-{
-  if (!nameIn || !*nameIn) {
-    return "";
-  }
-  return SystemTools::FindProgram(std::string(nameIn), userPaths,
-                                  no_system_path);
-}
-
 std::string SystemTools::FindProgram(std::string const& name,
                                      std::vector<std::string> const& userPaths,
                                      bool no_system_path)
@@ -2972,20 +2961,6 @@ std::string SystemTools::FindProgram(std::string const& name,
     }
   }
   // Couldn't find the program.
-  return "";
-}
-
-std::string SystemTools::FindProgram(std::vector<std::string> const& names,
-                                     std::vector<std::string> const& path,
-                                     bool noSystemPath)
-{
-  for (std::string const& name : names) {
-    // Try to find the program.
-    std::string result = SystemTools::FindProgram(name, path, noSystemPath);
-    if (!result.empty()) {
-      return result;
-    }
-  }
   return "";
 }
 
