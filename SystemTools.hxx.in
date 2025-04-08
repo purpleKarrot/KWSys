@@ -717,12 +717,6 @@ public:
     bool no_system_path = false);
 
   /**
-   * Find a library in the system PATH, with optional extra paths
-   */
-  static std::string FindLibrary(std::string const& name,
-                                 std::vector<std::string> const& path);
-
-  /**
    * Return true if the file is a directory
    */
   static bool FileIsDirectory(std::string const& name);
