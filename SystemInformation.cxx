@@ -5324,14 +5324,10 @@ bool SystemInformationImplementation::QueryOSInformation()
 
   this->OSName = "Windows";
 
-  OSVERSIONINFOEXW osvi;
+  OSVERSIONINFOEXW osvi = { sizeof(osvi) };
   BOOL bIsWindows64Bit;
-  BOOL bOsVersionInfoEx;
   char operatingSystem[256];
 
-  // Try calling GetVersionEx using the OSVERSIONINFOEX structure.
-  ZeroMemory(&osvi, sizeof(OSVERSIONINFOEXW));
-  osvi.dwOSVersionInfoSize = sizeof(OSVERSIONINFOEXW);
 #  ifdef KWSYS_WINDOWS_DEPRECATED_GetVersionEx
 #    pragma warning(push)
 #    ifdef __INTEL_COMPILER
@@ -5343,12 +5339,8 @@ bool SystemInformationImplementation::QueryOSInformation()
 #      pragma warning(disable : 4996)
 #    endif
 #  endif
-  bOsVersionInfoEx = GetVersionExW((OSVERSIONINFOW*)&osvi);
-  if (!bOsVersionInfoEx) {
-    osvi.dwOSVersionInfoSize = sizeof(OSVERSIONINFOW);
-    if (!GetVersionExW((OSVERSIONINFOW*)&osvi)) {
-      return false;
-    }
+  if (!GetVersionExW((OSVERSIONINFOW*)&osvi)) {
+    return false;
   }
 #  ifdef KWSYS_WINDOWS_DEPRECATED_GetVersionEx
 #    ifdef __clang__
@@ -5374,82 +5366,39 @@ bool SystemInformationImplementation::QueryOSInformation()
       if (osvi.dwMajorVersion == 5 && osvi.dwMinorVersion == 2) {
         this->OSRelease = "XP";
       }
-#  ifdef VER_NT_WORKSTATION
       // Test for product type.
-      if (bOsVersionInfoEx) {
-        if (osvi.wProductType == VER_NT_WORKSTATION) {
-          if (osvi.dwMajorVersion == 6 && osvi.dwMinorVersion == 0) {
-            this->OSRelease = "Vista";
-          }
-          if (osvi.dwMajorVersion == 6 && osvi.dwMinorVersion == 1) {
-            this->OSRelease = "7";
-          }
-// VER_SUITE_PERSONAL may not be defined
-#    ifdef VER_SUITE_PERSONAL
-          else {
-            if (osvi.wSuiteMask & VER_SUITE_PERSONAL) {
-              this->OSRelease += " Personal";
-            } else {
-              this->OSRelease += " Professional";
-            }
-          }
-#    endif
-        } else if (osvi.wProductType == VER_NT_SERVER) {
-          // Check for .NET Server instead of Windows XP.
-          if (osvi.dwMajorVersion == 5 && osvi.dwMinorVersion == 1) {
-            this->OSRelease = ".NET";
-          }
-
-          // Continue with the type detection.
-          if (osvi.wSuiteMask & VER_SUITE_DATACENTER) {
-            this->OSRelease += " DataCenter Server";
-          } else if (osvi.wSuiteMask & VER_SUITE_ENTERPRISE) {
-            this->OSRelease += " Advanced Server";
+      if (osvi.wProductType == VER_NT_WORKSTATION) {
+        if (osvi.dwMajorVersion == 6 && osvi.dwMinorVersion == 0) {
+          this->OSRelease = "Vista";
+        }
+        if (osvi.dwMajorVersion == 6 && osvi.dwMinorVersion == 1) {
+          this->OSRelease = "7";
+        } else {
+          if (osvi.wSuiteMask & VER_SUITE_PERSONAL) {
+            this->OSRelease += " Personal";
           } else {
-            this->OSRelease += " Server";
+            this->OSRelease += " Professional";
           }
         }
-
-        snprintf(operatingSystem, sizeof(operatingSystem), "%ls (Build %ld)",
-                 osvi.szCSDVersion, osvi.dwBuildNumber & 0xFFFF);
-        this->OSVersion = operatingSystem;
-      } else
-#  endif // VER_NT_WORKSTATION
-      {
-        HKEY hKey;
-        wchar_t szProductType[80];
-        DWORD dwBufLen;
-
-        // Query the registry to retrieve information.
-        RegOpenKeyExW(HKEY_LOCAL_MACHINE,
-                      L"SYSTEM\\CurrentControlSet\\Control\\ProductOptions", 0,
-                      KEY_QUERY_VALUE, &hKey);
-        RegQueryValueExW(hKey, L"ProductType", nullptr, nullptr,
-                         (LPBYTE)szProductType, &dwBufLen);
-        RegCloseKey(hKey);
-
-        if (lstrcmpiW(L"WINNT", szProductType) == 0) {
-          this->OSRelease += " Professional";
+      } else if (osvi.wProductType == VER_NT_SERVER) {
+        // Check for .NET Server instead of Windows XP.
+        if (osvi.dwMajorVersion == 5 && osvi.dwMinorVersion == 1) {
+          this->OSRelease = ".NET";
         }
-        if (lstrcmpiW(L"LANMANNT", szProductType) == 0) {
-          // Decide between Windows 2000 Advanced Server and Windows .NET
-          // Enterprise Server.
-          if (osvi.dwMajorVersion == 5 && osvi.dwMinorVersion == 1) {
-            this->OSRelease += " Standard Server";
-          } else {
-            this->OSRelease += " Server";
-          }
-        }
-        if (lstrcmpiW(L"SERVERNT", szProductType) == 0) {
-          // Decide between Windows 2000 Advanced Server and Windows .NET
-          // Enterprise Server.
-          if (osvi.dwMajorVersion == 5 && osvi.dwMinorVersion == 1) {
-            this->OSRelease += " Enterprise Server";
-          } else {
-            this->OSRelease += " Advanced Server";
-          }
+
+        // Continue with the type detection.
+        if (osvi.wSuiteMask & VER_SUITE_DATACENTER) {
+          this->OSRelease += " DataCenter Server";
+        } else if (osvi.wSuiteMask & VER_SUITE_ENTERPRISE) {
+          this->OSRelease += " Advanced Server";
+        } else {
+          this->OSRelease += " Server";
         }
       }
+
+      snprintf(operatingSystem, sizeof(operatingSystem), "%ls (Build %ld)",
+               osvi.szCSDVersion, osvi.dwBuildNumber & 0xFFFF);
+      this->OSVersion = operatingSystem;
 
       // Display version, service pack (if any), and build number.
       if (osvi.dwMajorVersion <= 4) {
