@@ -5325,7 +5325,6 @@ bool SystemInformationImplementation::QueryOSInformation()
   this->OSName = "Windows";
 
   OSVERSIONINFOEXW osvi = { sizeof(osvi) };
-  BOOL bIsWindows64Bit;
   char operatingSystem[256];
 
 #  ifdef KWSYS_WINDOWS_DEPRECATED_GetVersionEx
@@ -5409,27 +5408,6 @@ bool SystemInformationImplementation::QueryOSInformation()
                  osvi.dwBuildNumber & 0xFFFF);
         this->OSVersion = operatingSystem;
       } else if (osvi.dwMajorVersion == 5 && osvi.dwMinorVersion == 1) {
-        // Windows XP and .NET server.
-        using LPFNPROC = BOOL(CALLBACK*)(HANDLE, BOOL*);
-        HINSTANCE hKernelDLL;
-        LPFNPROC DLLProc;
-
-        // Load the Kernel32 DLL.
-        hKernelDLL = LoadLibraryW(L"kernel32");
-        if (hKernelDLL != nullptr) {
-          // Only XP and .NET Server support IsWOW64Process so... Load
-          // dynamically!
-          DLLProc = (LPFNPROC)GetProcAddress(hKernelDLL, "IsWow64Process");
-
-          // If the function address is valid, call the function.
-          if (DLLProc != nullptr)
-            (DLLProc)(GetCurrentProcess(), &bIsWindows64Bit);
-          else
-            bIsWindows64Bit = false;
-
-          // Free the DLL module.
-          FreeLibrary(hKernelDLL);
-        }
       } else {
         // Windows 2000 and everything else.
         snprintf(operatingSystem, sizeof(operatingSystem), "%ls (Build %ld)",
