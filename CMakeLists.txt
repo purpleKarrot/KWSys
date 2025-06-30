@@ -976,7 +976,10 @@ if(KWSYS_STANDALONE OR CMake_SOURCE_DIR)
       KWSYS_CXX_TEST_SRCS ${KWSYS_NAMESPACE}TestsCxx.cxx
       ${KWSYS_CXX_TESTS}
       )
-    add_executable(${KWSYS_NAMESPACE}TestsCxx ${KWSYS_CXX_TEST_SRCS})
+    add_executable(${KWSYS_NAMESPACE}TestsCxx
+      ${KWSYS_CXX_TEST_SRCS}
+      test.manifest
+    )
     set_property(TARGET ${KWSYS_NAMESPACE}TestsCxx PROPERTY C_CLANG_TIDY "")
     set_property(TARGET ${KWSYS_NAMESPACE}TestsCxx PROPERTY CXX_CLANG_TIDY "")
     set_property(TARGET ${KWSYS_NAMESPACE}TestsCxx PROPERTY C_INCLUDE_WHAT_YOU_USE "")
