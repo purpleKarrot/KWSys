@@ -732,8 +732,8 @@ static int kwsysUnPutEnv(std::string const& env)
 }
 
 #elif defined(__CYGWIN__) || defined(__GLIBC__)
-/* putenv("A") removes A from the environment.  It must not put the
-   memory in the environment because it does not have any "=" syntax.  */
+// putenv("A") removes A from the environment with the GNU runtime.
+// It cannot put the memory in the environment since there is no  "=" syntax.
 
 static int kwsysUnPutEnv(std::string const& env)
 {
