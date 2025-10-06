@@ -835,7 +835,7 @@ public:
   bool Put(char const* env)
   {
 #  if defined(_WIN32)
-    std::wstring const wEnv = Encoding::ToWide(env);
+    std::wstring wEnv = Encoding::ToWide(env);
     wchar_t* newEnv = _wcsdup(wEnv.c_str());
 #  else
     char* newEnv = strdup(env);
@@ -843,7 +843,21 @@ public:
     Free oldEnv(this->Release(newEnv));
     this->insert(newEnv);
 #  if defined(_WIN32)
-    return _wputenv(newEnv) == 0;
+    // `_wputenv` updates both the C runtime library's `_wenviron` array
+    // and the process's environment block.
+    if (_wputenv(newEnv) != 0) {
+      return false;
+    }
+    // There seems to be no way to add an empty variable to `_wenviron`
+    // through the C runtime library: `_wputenv("A=")` removes "A".
+    // Add it directly to the process's environment block.
+    // This is used by child processes, and by our `GetEnv`.
+    std::string::size_type const eqPos = wEnv.find(L'=');
+    if (eqPos != std::string::npos && (eqPos + 1) == wEnv.size()) {
+      wEnv.resize(eqPos);
+      return SetEnvironmentVariableW(wEnv.c_str(), L"");
+    }
+    return true;
 #  else
     return putenv(newEnv) == 0;
 #  endif
