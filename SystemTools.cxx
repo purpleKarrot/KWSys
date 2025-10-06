@@ -750,12 +750,7 @@ static int kwsysUnPutEnv(std::string const& env)
 }
 
 #elif defined(_WIN32)
-/* putenv("A=") places "A=" in the environment, which is as close to
-   removal as we can get with the putenv API.  We have to leak the
-   most recent value placed in the environment for each variable name
-   on program exit in case exit routines access it.  */
-
-static kwsysEnvSet kwsysUnPutEnvSet;
+// putenv("A=") removes A from the environment with the MSVC runtime.
 
 static int kwsysUnPutEnv(std::string const& env)
 {
@@ -763,13 +758,7 @@ static int kwsysUnPutEnv(std::string const& env)
   size_t const pos = wEnv.find('=');
   size_t const len = pos == std::string::npos ? wEnv.size() : pos;
   wEnv.resize(len + 1, L'=');
-  wchar_t* newEnv = _wcsdup(wEnv.c_str());
-  if (!newEnv) {
-    return -1;
-  }
-  kwsysEnvSet::Free oldEnv(kwsysUnPutEnvSet.Release(newEnv));
-  kwsysUnPutEnvSet.insert(newEnv);
-  return _wputenv(newEnv);
+  return _wputenv(wEnv.c_str());
 }
 
 #else
