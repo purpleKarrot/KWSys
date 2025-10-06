@@ -703,12 +703,12 @@ bool SystemTools::GetEnv(std::string const& key, std::string& result)
 bool SystemTools::HasEnv(char const* key)
 {
 #if defined(_WIN32)
-  std::wstring const wkey = Encoding::ToWide(key);
-  wchar_t const* v = _wgetenv(wkey.c_str());
+  std::wstring const wKey = Encoding::ToWide(key);
+  DWORD r = GetEnvironmentVariableW(wKey.c_str(), nullptr, 0);
+  return !(r == 0 && GetLastError() == ERROR_ENVVAR_NOT_FOUND);
 #else
-  char const* v = getenv(key);
+  return getenv(key) != nullptr;
 #endif
-  return v;
 }
 
 bool SystemTools::HasEnv(std::string const& key)
