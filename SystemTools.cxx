@@ -675,15 +675,21 @@ char const* SystemTools::GetEnv(std::string const& key)
 bool SystemTools::GetEnv(char const* key, std::string& result)
 {
 #if defined(_WIN32)
-  auto wide_key = Encoding::ToWide(key);
-  auto result_size = GetEnvironmentVariableW(wide_key.data(), nullptr, 0);
-  if (result_size <= 0) {
+  std::wstring const wKey = Encoding::ToWide(key);
+  std::vector<wchar_t> heapBuf;
+  wchar_t stackBuf[256];
+  DWORD bufSz = static_cast<DWORD>(sizeof(stackBuf) / sizeof(stackBuf[0]));
+  wchar_t* buf = stackBuf;
+  DWORD r;
+  while ((r = GetEnvironmentVariableW(wKey.c_str(), buf, bufSz)) >= bufSz) {
+    heapBuf.resize(r);
+    bufSz = r;
+    buf = &heapBuf[0];
+  }
+  if (r == 0 && GetLastError() == ERROR_ENVVAR_NOT_FOUND) {
     return false;
   }
-  std::wstring wide_result;
-  wide_result.resize(result_size - 1);
-  GetEnvironmentVariableW(wide_key.data(), &wide_result[0], result_size);
-  result = Encoding::ToNarrow(wide_result);
+  result = Encoding::ToNarrow(buf);
   return true;
 #else
   char const* v = getenv(key);
