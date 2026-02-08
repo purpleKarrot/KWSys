@@ -60,6 +60,20 @@ static char kwsysString_strcasecmp_tolower[] = {
 };
 #  endif
 
+unsigned char kwsysString_tolower(char c)
+{
+  unsigned char const uc = (unsigned char)c;
+  /* Push 'A-Z' to 230-255 so integer division by 230 is 1 only for them.  */
+  return (unsigned char)(uc ^ ((((uc + 230 - 'A') & 0xFF) / 230) << 5));
+}
+
+unsigned char kwsysString_toupper(char c)
+{
+  unsigned char const uc = (unsigned char)c;
+  /* Push 'a-z' to 230-255 so integer division by 230 is 1 only for them.  */
+  return (unsigned char)(uc ^ ((((uc + 230 - 'a') & 0xFF) / 230) << 5));
+}
+
 /*--------------------------------------------------------------------------*/
 int kwsysString_strcasecmp(char const* lhs, char const* rhs)
 {

@@ -913,6 +913,7 @@ if(KWSYS_STANDALONE OR CMake_SOURCE_DIR)
     # C tests
     set(KWSYS_C_TESTS
       testEncode.c
+      testString.c
       )
     if(KWSYS_STANDALONE)
       set(KWSYS_C_TESTS ${KWSYS_C_TESTS} testFail.c)
