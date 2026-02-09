@@ -1670,15 +1670,8 @@ std::string SystemTools::CapitalizedWords(std::string const& s)
 {
   std::string n(s);
   for (size_t i = 0; i < s.size(); i++) {
-#if defined(_MSC_VER) && defined(_MT) && defined(_DEBUG)
-    // MS has an assert that will fail if s[i] < 0; setting
-    // LC_CTYPE using setlocale() does *not* help. Painful.
-    if ((int)s[i] >= 0 && isalpha(s[i]) &&
-        (i == 0 || ((int)s[i - 1] >= 0 && isspace(s[i - 1]))))
-#else
-    if (isalpha(s[i]) && (i == 0 || isspace(s[i - 1])))
-#endif
-    {
+    if (kwsysString_isalpha(s[i]) &&
+        (i == 0 || kwsysString_isspace(s[i - 1]))) {
       n[i] = static_cast<std::string::value_type>(kwsysString_toupper(s[i]));
     }
   }
@@ -1690,15 +1683,8 @@ std::string SystemTools::UnCapitalizedWords(std::string const& s)
 {
   std::string n(s);
   for (size_t i = 0; i < s.size(); i++) {
-#if defined(_MSC_VER) && defined(_MT) && defined(_DEBUG)
-    // MS has an assert that will fail if s[i] < 0; setting
-    // LC_CTYPE using setlocale() does *not* help. Painful.
-    if ((int)s[i] >= 0 && isalpha(s[i]) &&
-        (i == 0 || ((int)s[i - 1] >= 0 && isspace(s[i - 1]))))
-#else
-    if (isalpha(s[i]) && (i == 0 || isspace(s[i - 1])))
-#endif
-    {
+    if (kwsysString_isalpha(s[i]) &&
+        (i == 0 || kwsysString_isspace(s[i - 1]))) {
       n[i] = static_cast<std::string::value_type>(kwsysString_tolower(s[i]));
     }
   }
@@ -1713,7 +1699,8 @@ std::string SystemTools::AddSpaceBetweenCapitalizedWords(std::string const& s)
     n.reserve(s.size());
     n += s[0];
     for (size_t i = 1; i < s.size(); i++) {
-      if (isupper(s[i]) && !isspace(s[i - 1]) && !isupper(s[i - 1])) {
+      if (kwsysString_isupper(s[i]) && !kwsysString_isspace(s[i - 1]) &&
+          !kwsysString_isupper(s[i - 1])) {
         n += ' ';
       }
       n += s[i];
@@ -1997,7 +1984,7 @@ int SystemTools::EstimateFormatLength(char const* format, va_list ap)
     if (*cur++ == '%') {
       // Skip "%%" since it doesn't correspond to a va_arg.
       if (*cur != '%') {
-        while (!int(isalpha(*cur))) {
+        while (!kwsysString_isalpha(*cur)) {
           ++cur;
         }
         switch (*cur) {
