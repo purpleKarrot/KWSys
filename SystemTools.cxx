@@ -3035,6 +3035,10 @@ static char const* RemoveTrailingSlashes(
   size_t length = inName.size();
   char const* name = inName.c_str();
 
+  if (length == 0) {
+    return name;
+  }
+
   size_t last = length - 1;
   if (last > 0 && (name[last] == '/' || name[last] == '\\') &&
       name[last - 1] != ':') {
@@ -3076,6 +3080,10 @@ bool SystemTools::FileIsDirectory(std::string const& inName)
 
 bool SystemTools::FileIsExecutable(std::string const& inName)
 {
+  if (inName.empty()) {
+    return false;
+  }
+
 #ifdef _WIN32
   char local_buffer[KWSYS_SYSTEMTOOLS_MAXPATH];
   std::string string_buffer;
