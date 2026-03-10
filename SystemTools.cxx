@@ -3037,7 +3037,7 @@ static char const* RemoveTrailingSlashes(
 
   size_t last = length - 1;
   if (last > 0 && (name[last] == '/' || name[last] == '\\') &&
-      strcmp(name, "/") != 0 && name[last - 1] != ':') {
+      name[last - 1] != ':') {
     if (last < sizeof(local_buffer)) {
       memcpy(local_buffer, name, last);
       local_buffer[last] = '\0';
