@@ -563,7 +563,7 @@ std::string SystemToolsStatic::GetCasePathName(std::string const& pathIn)
   // actual case of servers and shares.
   if (path_components.size() > 2 && path_components[0] == "//") {
     casePath += path_components[idx++];
-    casePath += "/";
+    casePath += '/';
     casePath += path_components[idx++];
     sep = "/";
   }
@@ -2053,7 +2053,7 @@ std::string SystemTools::EscapeChars(char const* str,
 static void ConvertVMSToUnix(std::string& path)
 {
   std::string::size_type rootEnd = path.find(":[");
-  std::string::size_type pathEnd = path.find("]");
+  std::string::size_type pathEnd = path.find(']');
   if (rootEnd != std::string::npos) {
     std::string root = path.substr(0, rootEnd);
     std::string pathPart = path.substr(rootEnd + 2, pathEnd - rootEnd - 2);
@@ -2065,7 +2065,7 @@ static void ConvertVMSToUnix(std::string& path)
       }
       pos0++;
     }
-    path = "/" + root + "/" + pathPart;
+    path = '/' + root + '/' + pathPart;
   }
 }
 #endif
@@ -3970,7 +3970,7 @@ bool SystemTools::LocateFileInDir(char const* filename, char const* dir,
 
     std::string temp = dir;
     if (need_slash) {
-      temp += "/";
+      temp += '/';
     }
     temp += filename_base;
 
@@ -4000,11 +4000,11 @@ bool SystemTools::LocateFileInDir(char const* filename, char const* dir,
           break;
         }
 
-        filename_dir_bases = filename_dir_base + "/" + filename_dir_bases;
+        filename_dir_bases = filename_dir_base + '/' + filename_dir_bases;
 
         temp = dir;
         if (need_slash) {
-          temp += "/";
+          temp += '/';
         }
         temp += filename_dir_bases;
 
@@ -4128,7 +4128,7 @@ std::string SystemTools::MakeCidentifier(std::string const& s)
 {
   std::string str(s);
   if (str.find_first_of("0123456789") == 0) {
-    str = "_" + str;
+    str = '_' + str;
   }
 
   std::string permited_chars("_"
@@ -4523,10 +4523,10 @@ std::string SystemTools::GetOperatingSystemNameAndVersion()
           res += " Advanced Server";
         }
 
-        res += " ";
+        res += ' ';
         snprintf(buffer, sizeof(buffer), "%ld", osvi.dwMajorVersion);
         res += buffer;
-        res += ".";
+        res += '.';
         snprintf(buffer, sizeof(buffer), "%ld", osvi.dwMinorVersion);
         res += buffer;
       }
@@ -4549,26 +4549,26 @@ std::string SystemTools::GetOperatingSystemNameAndVersion()
           res += " Service Pack 6a (Build ";
           snprintf(buffer, sizeof(buffer), "%ld", osvi.dwBuildNumber & 0xFFFF);
           res += buffer;
-          res += ")";
+          res += ')';
         } else // Windows NT 4.0 prior to SP6a
         {
-          res += " ";
+          res += ' ';
           res += osvi.szCSDVersion;
           res += " (Build ";
           snprintf(buffer, sizeof(buffer), "%ld", osvi.dwBuildNumber & 0xFFFF);
           res += buffer;
-          res += ")";
+          res += ')';
         }
 
         RegCloseKey(hKey);
       } else // Windows NT 3.51 and earlier or Windows 2000 and later
       {
-        res += " ";
+        res += ' ';
         res += osvi.szCSDVersion;
         res += " (Build ";
         snprintf(buffer, sizeof(buffer), "%ld", osvi.dwBuildNumber & 0xFFFF);
         res += buffer;
-        res += ")";
+        res += ')';
       }
 
       break;
