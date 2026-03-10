@@ -198,7 +198,7 @@ bool Glob::RecurseDirectory(std::string::size_type start,
   std::string realname;
   std::string fname;
   for (cc = 0; cc < d.GetNumberOfFiles(); cc++) {
-    fname = d.GetFile(cc);
+    fname = d.GetFileName(cc);
     if (fname == "." || fname == "..") {
       continue;
     }
@@ -305,7 +305,7 @@ void Glob::ProcessDirectory(std::string::size_type start,
   std::string realname;
   std::string fname;
   for (cc = 0; cc < d.GetNumberOfFiles(); cc++) {
-    fname = d.GetFile(cc);
+    fname = d.GetFileName(cc);
     if (fname == "." || fname == "..") {
       continue;
     }

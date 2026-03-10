@@ -2660,15 +2660,15 @@ Status SystemTools::CopyADirectory(std::string const& source,
   }
 
   for (size_t fileNum = 0; fileNum < dir.GetNumberOfFiles(); ++fileNum) {
-    if (strcmp(dir.GetFile(static_cast<unsigned long>(fileNum)), ".") != 0 &&
-        strcmp(dir.GetFile(static_cast<unsigned long>(fileNum)), "..") != 0) {
+    std::string const& filename = dir.GetFileName(fileNum);
+    if (filename != "." && filename != "..") {
       std::string fullPath = source;
-      fullPath += "/";
-      fullPath += dir.GetFile(static_cast<unsigned long>(fileNum));
+      fullPath += '/';
+      fullPath += filename;
       if (SystemTools::FileIsDirectory(fullPath)) {
         std::string fullDestPath = destination;
-        fullDestPath += "/";
-        fullDestPath += dir.GetFile(static_cast<unsigned long>(fileNum));
+        fullDestPath += '/';
+        fullDestPath += filename;
         status = SystemTools::CopyADirectory(fullPath, fullDestPath, when);
         if (!status.IsSuccess()) {
           return status;
@@ -2841,11 +2841,11 @@ Status SystemTools::RemoveADirectory(std::string const& source)
 
   size_t fileNum;
   for (fileNum = 0; fileNum < dir.GetNumberOfFiles(); ++fileNum) {
-    if (strcmp(dir.GetFile(static_cast<unsigned long>(fileNum)), ".") != 0 &&
-        strcmp(dir.GetFile(static_cast<unsigned long>(fileNum)), "..") != 0) {
+    std::string const& filename = dir.GetFileName(fileNum);
+    if (filename != "." && filename != "..") {
       std::string fullPath = source;
-      fullPath += "/";
-      fullPath += dir.GetFile(static_cast<unsigned long>(fileNum));
+      fullPath += '/';
+      fullPath += filename;
       if (SystemTools::FileIsDirectory(fullPath) &&
           !SystemTools::FileIsSymlink(fullPath)) {
         status = SystemTools::RemoveADirectory(fullPath);
