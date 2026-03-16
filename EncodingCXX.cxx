@@ -214,19 +214,20 @@ std::string Encoding::ToNarrow(wchar_t const* wcstr)
 }
 
 #if defined(_WIN32)
-// Convert local paths to UNC style paths
+// Convert local paths to UNC style paths:
+// * https://web.archive.org/web/20250329050419/
+//   https://cpp.arsenmk.com/2015/12/handling-long-paths-on-windows.html
+
 std::wstring Encoding::ToWindowsExtendedPath(std::string const& source)
 {
   return ToWindowsExtendedPath(ToWide(source));
 }
 
-// Convert local paths to UNC style paths
 std::wstring Encoding::ToWindowsExtendedPath(char const* source)
 {
   return ToWindowsExtendedPath(ToWide(source));
 }
 
-// Convert local paths to UNC style paths
 std::wstring Encoding::ToWindowsExtendedPath(std::wstring const& wsource)
 {
   // Resolve any relative paths
