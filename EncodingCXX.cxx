@@ -231,14 +231,32 @@ std::wstring Encoding::ToWindowsExtendedPath(char const* source)
 std::wstring Encoding::ToWindowsExtendedPath(std::wstring const& wsource)
 {
   // Resolve any relative paths
+  std::wstring wfull;
   DWORD wfull_len;
 
-  /* The +3 is a workaround for a bug in some versions of GetFullPathNameW that
-   * won't return a large enough buffer size if the input is too small */
-  wfull_len = GetFullPathNameW(wsource.c_str(), 0, nullptr, nullptr) + 3;
-  std::wstring wfull(wfull_len, L'\0');
-  wfull_len = GetFullPathNameW(wsource.c_str(), wfull_len, &wfull[0], nullptr);
-  wfull.resize(wfull_len);
+  // Try with a stack-allocated buffer first.
+  wchar_t local_buf[512];
+  size_t const local_buf_len = sizeof(local_buf) / sizeof(local_buf[0]);
+  wfull_len =
+    GetFullPathNameW(wsource.c_str(), local_buf_len, local_buf, nullptr);
+  if (wfull_len <= local_buf_len) {
+    // The stack-allocated buffer was large enough.  It holds the result.
+
+    // Store the absolute path to be returned.
+    wfull.assign(local_buf, wfull_len);
+  } else {
+    // The stack-allocated buffer was too small, but now we know how
+    // much to allocate on the heap.
+
+    // Some versions of GetFullPathNameW return a slightly too-small size.
+    wfull_len += 3;
+
+    // Try again with a heap-allocated buffer.
+    wfull.resize(wfull_len, L'\0');
+    wfull_len =
+      GetFullPathNameW(wsource.c_str(), wfull_len, &wfull[0], nullptr);
+    wfull.resize(wfull_len);
+  }
 
   if (wfull_len >= 2 && kwsysString_isalpha(wfull[0]) &&
       wfull[1] == L':') { /* C:\Foo\bar\FooBar.txt */
