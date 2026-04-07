@@ -2418,12 +2418,13 @@ static int kwsysProcess_List__Next_NT4(kwsysProcess_List* self)
 
 static int kwsysProcess_List__GetProcessId_NT4(kwsysProcess_List* self)
 {
-  return self->CurrentInfo ? self->CurrentInfo->ProcessId : -1;
+  return self->CurrentInfo ? (int)self->CurrentInfo->ProcessId : -1;
 }
 
 static int kwsysProcess_List__GetParentId_NT4(kwsysProcess_List* self)
 {
-  return self->CurrentInfo ? self->CurrentInfo->InheritedFromProcessId : -1;
+  return self->CurrentInfo ? (int)self->CurrentInfo->InheritedFromProcessId
+                           : -1;
 }
 
 static int kwsysProcess_List__New_Snapshot(kwsysProcess_List* self)
@@ -2488,12 +2489,12 @@ static int kwsysProcess_List__Next_Snapshot(kwsysProcess_List* self)
 
 static int kwsysProcess_List__GetProcessId_Snapshot(kwsysProcess_List* self)
 {
-  return self->Snapshot ? self->CurrentEntry.th32ProcessID : -1;
+  return self->Snapshot ? (int)self->CurrentEntry.th32ProcessID : -1;
 }
 
 static int kwsysProcess_List__GetParentId_Snapshot(kwsysProcess_List* self)
 {
-  return self->Snapshot ? self->CurrentEntry.th32ParentProcessID : -1;
+  return self->Snapshot ? (int)self->CurrentEntry.th32ParentProcessID : -1;
 }
 
 static void kwsysProcessKill(DWORD pid)
