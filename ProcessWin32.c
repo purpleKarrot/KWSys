@@ -1706,16 +1706,17 @@ DWORD kwsysProcessCreate(kwsysProcess* cp, int index,
   }
 
   /* Create inherited copies of the handles.  */
-  (error = kwsysProcessCreateChildHandle(&si->StartupInfo.hStdInput,
-                                         si->hStdInput, 1)) ||
-    (error = kwsysProcessCreateChildHandle(&si->StartupInfo.hStdOutput,
-                                           si->hStdOutput, 0)) ||
-    (error = kwsysProcessCreateChildHandle(&si->StartupInfo.hStdError,
-                                           si->hStdError, 0)) ||
-    /* Create the process.  */
-    (!CreateProcessW(0, cp->Commands[index], 0, 0, TRUE, creationFlags, 0, 0,
-                     &si->StartupInfo, &cp->ProcessInformation[index]) &&
-     (error = GetLastError()));
+  (void)((error = kwsysProcessCreateChildHandle(&si->StartupInfo.hStdInput,
+                                                si->hStdInput, 1)) ||
+         (error = kwsysProcessCreateChildHandle(&si->StartupInfo.hStdOutput,
+                                                si->hStdOutput, 0)) ||
+         (error = kwsysProcessCreateChildHandle(&si->StartupInfo.hStdError,
+                                                si->hStdError, 0)) ||
+         /* Create the process.  */
+         (!CreateProcessW(0, cp->Commands[index], 0, 0, TRUE, creationFlags, 0,
+                          0, &si->StartupInfo,
+                          &cp->ProcessInformation[index]) &&
+          (error = GetLastError())));
 
   /* Close the inherited copies of the handles. */
   if (si->StartupInfo.hStdInput != si->hStdInput) {
