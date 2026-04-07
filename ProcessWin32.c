@@ -2354,7 +2354,7 @@ static int kwsysProcess_List__New_NT4(kwsysProcess_List* self)
   if (hNT) {
     /* Get pointers to the needed API functions.  */
     self->P_ZwQuerySystemInformation =
-      ((ZwQuerySystemInformationType)GetProcAddress(
+      ((ZwQuerySystemInformationType)(void*)GetProcAddress(
         hNT, "ZwQuerySystemInformation"));
   }
   if (!self->P_ZwQuerySystemInformation) {
@@ -2435,12 +2435,12 @@ static int kwsysProcess_List__New_Snapshot(kwsysProcess_List* self)
   HMODULE hKernel = GetModuleHandleW(L"kernel32.dll");
   if (hKernel) {
     self->P_CreateToolhelp32Snapshot =
-      ((CreateToolhelp32SnapshotType)GetProcAddress(
+      ((CreateToolhelp32SnapshotType)(void*)GetProcAddress(
         hKernel, "CreateToolhelp32Snapshot"));
     self->P_Process32First =
-      ((Process32FirstType)GetProcAddress(hKernel, "Process32First"));
+      ((Process32FirstType)(void*)GetProcAddress(hKernel, "Process32First"));
     self->P_Process32Next =
-      ((Process32NextType)GetProcAddress(hKernel, "Process32Next"));
+      ((Process32NextType)(void*)GetProcAddress(hKernel, "Process32Next"));
   }
   return (self->P_CreateToolhelp32Snapshot && self->P_Process32First &&
           self->P_Process32Next)
