@@ -5330,7 +5330,8 @@ bool SystemInformationImplementation::QueryOSInformation()
 
   this->OSName = "Windows";
 
-  OSVERSIONINFOEXW osvi = { sizeof(osvi) };
+  OSVERSIONINFOEXW osvi = {};
+  osvi.dwOSVersionInfoSize = sizeof(osvi);
 #  ifdef KWSYS_WINDOWS_DEPRECATED_GetVersionEx
 #    pragma warning(push)
 #    ifdef __INTEL_COMPILER
