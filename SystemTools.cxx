@@ -508,11 +508,6 @@ public:
 #endif
 
   /**
-   * Actual implementation of FileIsFullPath.
-   */
-  static bool FileIsFullPath(char const*, size_t);
-
-  /**
    * Find a filename (file or directory) in the system PATH, with
    * optional extra paths.
    */
@@ -3983,18 +3978,8 @@ bool SystemTools::LocateFileInDir(char const* filename, char const* dir,
   return res;
 }
 
-bool SystemTools::FileIsFullPath(std::string const& in_name)
-{
-  return SystemToolsStatic::FileIsFullPath(in_name.c_str(), in_name.size());
-}
-
-bool SystemTools::FileIsFullPath(char const* in_name)
-{
-  return SystemToolsStatic::FileIsFullPath(
-    in_name, in_name[0] ? (in_name[1] ? 2 : 1) : 0);
-}
-
-bool SystemToolsStatic::FileIsFullPath(char const* in_name, size_t len)
+namespace {
+bool FileIsFullPathImpl(char const* in_name, size_t len)
 {
 #if defined(_WIN32) && !defined(__CYGWIN__)
   // On Windows, the name must be at least two characters long.
@@ -4025,6 +4010,17 @@ bool SystemToolsStatic::FileIsFullPath(char const* in_name, size_t len)
     return true;
   }
   return false;
+}
+}
+
+bool SystemTools::FileIsFullPath(std::string const& in_name)
+{
+  return FileIsFullPathImpl(in_name.c_str(), in_name.size());
+}
+
+bool SystemTools::FileIsFullPath(char const* in_name)
+{
+  return FileIsFullPathImpl(in_name, in_name[0] ? (in_name[1] ? 2 : 1) : 0);
 }
 
 Status SystemTools::GetShortPath(std::string const& path,
