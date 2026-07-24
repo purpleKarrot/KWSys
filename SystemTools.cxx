@@ -495,20 +495,33 @@ public:
   }
 };
 
+#ifdef _WIN32
 /**
  * SystemTools static variables singleton class.
  */
 class SystemToolsStatic
 {
 public:
-#ifdef _WIN32
   static char const* GetEnvBuffered(char const* key);
   std::map<std::string, std::string> EnvMap;
-#endif
 };
 
 // Do NOT initialize.  Default initialization to zero is necessary.
 static SystemToolsStatic* SystemToolsStatics;
+
+char const* SystemToolsStatic::GetEnvBuffered(char const* key)
+{
+  std::string env;
+  if (SystemTools::GetEnv(key, env)) {
+    std::string& menv = SystemToolsStatics->EnvMap[key];
+    if (menv != env) {
+      menv = std::move(env);
+    }
+    return menv.c_str();
+  }
+  return nullptr;
+}
+#endif
 
 // adds the elements of the env variable path to the arg passed in
 void SystemTools::GetPath(std::vector<std::string>& path, char const* env)
@@ -546,21 +559,6 @@ void SystemTools::GetPath(std::vector<std::string>& path, char const* env)
     SystemTools::ConvertToUnixSlashes(*i);
   }
 }
-
-#if defined(_WIN32)
-char const* SystemToolsStatic::GetEnvBuffered(char const* key)
-{
-  std::string env;
-  if (SystemTools::GetEnv(key, env)) {
-    std::string& menv = SystemToolsStatics->EnvMap[key];
-    if (menv != env) {
-      menv = std::move(env);
-    }
-    return menv.c_str();
-  }
-  return nullptr;
-}
-#endif
 
 char const* SystemTools::GetEnv(char const* key)
 {
@@ -4596,13 +4594,17 @@ void SystemTools::ClassInitialize()
   SetVMSFeature("DECC$FILENAME_UNIX_ONLY", 1);
 #endif
 
+#ifdef _WIN32
   // Create statics singleton instance
   SystemToolsStatics = new SystemToolsStatic;
+#endif
 }
 
 void SystemTools::ClassFinalize()
 {
+#ifdef _WIN32
   delete SystemToolsStatics;
+#endif
 }
 
 } // namespace KWSYS_NAMESPACE

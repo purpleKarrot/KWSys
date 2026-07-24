@@ -43,7 +43,9 @@ typedef @KWSYS_NAMESPACE@_VA_LIST::hack_va_list va_list;
 
 namespace @KWSYS_NAMESPACE@ {
 
+#ifdef _WIN32
 class SystemToolsStatic;
+#endif
 
 /** \class SystemToolsManager
  * \brief Use to make sure SystemTools is initialized before it is used
@@ -1030,7 +1032,9 @@ private:
     std::vector<std::string> const& userPaths = std::vector<std::string>(),
     bool no_system_path = false);
 
+#ifdef _WIN32
   friend class SystemToolsStatic;
+#endif
   friend class SystemToolsManager;
 };
 
