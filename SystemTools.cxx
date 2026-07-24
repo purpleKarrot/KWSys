@@ -502,7 +502,6 @@ class SystemToolsStatic
 {
 public:
 #ifdef _WIN32
-  static std::string GetCasePathName(std::string const& pathIn);
   static char const* GetEnvBuffered(char const* key);
   std::map<std::string, std::string> EnvMap;
 #endif
@@ -510,79 +509,6 @@ public:
 
 // Do NOT initialize.  Default initialization to zero is necessary.
 static SystemToolsStatic* SystemToolsStatics;
-
-#ifdef _WIN32
-std::string SystemToolsStatic::GetCasePathName(std::string const& pathIn)
-{
-  std::string casePath;
-
-  // First check if the file is relative. We don't fix relative paths since the
-  // real case depends on the root directory and the given path fragment may
-  // have meaning elsewhere in the project.
-  if (!SystemTools::FileIsFullPath(pathIn)) {
-    // This looks unnecessary, but it allows for the return value optimization
-    // since all return paths return the same local variable.
-    casePath = pathIn;
-    return casePath;
-  }
-
-  std::vector<std::string> path_components;
-  SystemTools::SplitPath(pathIn, path_components);
-
-  // Start with root component.
-  std::vector<std::string>::size_type idx = 0;
-  casePath = path_components[idx++];
-  // make sure drive letter is always upper case
-  if (casePath.size() > 1 && casePath[1] == ':') {
-    casePath[0] = kwsysString_toupper(casePath[0]);
-  }
-  char const* sep = "";
-
-  // If network path, fill casePath with server/share so FindFirstFile
-  // will work after that.  Maybe someday call other APIs to get
-  // actual case of servers and shares.
-  if (path_components.size() > 2 && path_components[0] == "//") {
-    casePath += path_components[idx++];
-    casePath += '/';
-    casePath += path_components[idx++];
-    sep = "/";
-  }
-
-  // Convert case of all components that exist.
-  bool converting = true;
-  for (; idx < path_components.size(); idx++) {
-    casePath += sep;
-    sep = "/";
-
-    if (converting) {
-      // If path component contains wildcards, we skip matching
-      // because these filenames are not allowed on windows,
-      // and we do not want to match a different file.
-      if (path_components[idx].find('*') != std::string::npos ||
-          path_components[idx].find('?') != std::string::npos) {
-        converting = false;
-      } else {
-        std::string test_str = casePath;
-        test_str += path_components[idx];
-
-        WIN32_FIND_DATAW findData;
-        HANDLE hFind =
-          ::FindFirstFileW(Encoding::ToWide(test_str).c_str(), &findData);
-        if (INVALID_HANDLE_VALUE != hFind) {
-          auto case_file_name = Encoding::ToNarrow(findData.cFileName);
-          path_components[idx] = std::move(case_file_name);
-          ::FindClose(hFind);
-        } else {
-          converting = false;
-        }
-      }
-    }
-
-    casePath += path_components[idx];
-  }
-  return casePath;
-}
-#endif
 
 // adds the elements of the env variable path to the arg passed in
 void SystemTools::GetPath(std::vector<std::string>& path, char const* env)
@@ -3447,7 +3373,73 @@ std::string SystemTools::RelativePath(std::string const& local,
 std::string SystemTools::GetActualCaseForPath(std::string const& p)
 {
 #ifdef _WIN32
-  return SystemToolsStatic::GetCasePathName(p);
+  std::string casePath;
+
+  // First check if the file is relative. We don't fix relative paths since the
+  // real case depends on the root directory and the given path fragment may
+  // have meaning elsewhere in the project.
+  if (!SystemTools::FileIsFullPath(p)) {
+    // This looks unnecessary, but it allows for the return value optimization
+    // since all return paths return the same local variable.
+    casePath = p;
+    return casePath;
+  }
+
+  std::vector<std::string> path_components;
+  SystemTools::SplitPath(p, path_components);
+
+  // Start with root component.
+  std::vector<std::string>::size_type idx = 0;
+  casePath = path_components[idx++];
+  // make sure drive letter is always upper case
+  if (casePath.size() > 1 && casePath[1] == ':') {
+    casePath[0] = kwsysString_toupper(casePath[0]);
+  }
+  char const* sep = "";
+
+  // If network path, fill casePath with server/share so FindFirstFile
+  // will work after that.  Maybe someday call other APIs to get
+  // actual case of servers and shares.
+  if (path_components.size() > 2 && path_components[0] == "//") {
+    casePath += path_components[idx++];
+    casePath += '/';
+    casePath += path_components[idx++];
+    sep = "/";
+  }
+
+  // Convert case of all components that exist.
+  bool converting = true;
+  for (; idx < path_components.size(); idx++) {
+    casePath += sep;
+    sep = "/";
+
+    if (converting) {
+      // If path component contains wildcards, we skip matching
+      // because these filenames are not allowed on windows,
+      // and we do not want to match a different file.
+      if (path_components[idx].find('*') != std::string::npos ||
+          path_components[idx].find('?') != std::string::npos) {
+        converting = false;
+      } else {
+        std::string test_str = casePath;
+        test_str += path_components[idx];
+
+        WIN32_FIND_DATAW findData;
+        HANDLE hFind =
+          ::FindFirstFileW(Encoding::ToWide(test_str).c_str(), &findData);
+        if (INVALID_HANDLE_VALUE != hFind) {
+          auto case_file_name = Encoding::ToNarrow(findData.cFileName);
+          path_components[idx] = std::move(case_file_name);
+          ::FindClose(hFind);
+        } else {
+          converting = false;
+        }
+      }
+    }
+
+    casePath += path_components[idx];
+  }
+  return casePath;
 #else
   return p;
 #endif
