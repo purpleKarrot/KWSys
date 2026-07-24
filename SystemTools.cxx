@@ -503,6 +503,11 @@ class SystemToolsStatic
 {
 public:
   static char const* GetEnvBuffered(char const* key);
+  // This map exists so that the encoding conversion performed on Windows has a
+  // storage location which behaves like the global environment. Note that if
+  // an environment variable is set, previously returned values of that
+  // variable's value may be invalidated (and it is just as hazardous as
+  // keeping `getenv` results across `setenv` calls on POSIX platforms).
   std::map<std::string, std::string> EnvMap;
 };
 
