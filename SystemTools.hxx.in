@@ -1028,6 +1028,9 @@ private:
     return &SystemToolsManagerInstance;
   }
 
+  static void ReplaceStringImpl(std::string& source, char const* replace,
+                                size_t replaceSize, std::string const& with);
+
   friend class SystemToolsStatic;
   friend class SystemToolsManager;
 };

@@ -508,12 +508,6 @@ public:
 #endif
 
   /**
-   * Actual implementation of ReplaceString.
-   */
-  static void ReplaceString(std::string& source, char const* replace,
-                            size_t replaceSize, std::string const& with);
-
-  /**
    * Actual implementation of FileIsFullPath.
    */
   static bool FileIsFullPath(char const*, size_t);
@@ -972,8 +966,8 @@ void SystemTools::ReplaceString(std::string& source,
     return;
   }
 
-  SystemToolsStatic::ReplaceString(source, replace.c_str(), replace.size(),
-                                   with);
+  SystemTools::ReplaceStringImpl(source, replace.c_str(), replace.size(),
+                                 with);
 }
 
 void SystemTools::ReplaceString(std::string& source, char const* replace,
@@ -984,13 +978,13 @@ void SystemTools::ReplaceString(std::string& source, char const* replace,
     return;
   }
 
-  SystemToolsStatic::ReplaceString(source, replace, strlen(replace),
-                                   with ? with : "");
+  SystemTools::ReplaceStringImpl(source, replace, strlen(replace),
+                                 with ? with : "");
 }
 
-void SystemToolsStatic::ReplaceString(std::string& source, char const* replace,
-                                      size_t replaceSize,
-                                      std::string const& with)
+void SystemTools::ReplaceStringImpl(std::string& source, char const* replace,
+                                    size_t replaceSize,
+                                    std::string const& with)
 {
   char const* src = source.c_str();
   char* searchPos = const_cast<char*>(strstr(src, replace));
