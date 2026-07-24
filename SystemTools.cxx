@@ -506,15 +506,6 @@ public:
   static char const* GetEnvBuffered(char const* key);
   std::map<std::string, std::string> EnvMap;
 #endif
-
-  /**
-   * Find a filename (file or directory) in the system PATH, with
-   * optional extra paths.
-   */
-  static std::string FindName(
-    std::string const& name,
-    std::vector<std::string> const& userPaths = std::vector<std::string>(),
-    bool no_system_path = false);
 };
 
 // Do NOT initialize.  Default initialization to zero is necessary.
@@ -2869,7 +2860,7 @@ size_t SystemTools::GetMaximumFilePathLength()
  * the system search path.  Returns the full path to the file if it is
  * found.  Otherwise, the empty string is returned.
  */
-std::string SystemToolsStatic::FindName(
+std::string SystemTools::FindNameImpl(
   std::string const& name, std::vector<std::string> const& userPaths,
   bool no_system_path)
 {
@@ -2907,7 +2898,7 @@ std::string SystemTools::FindFile(std::string const& name,
                                   bool no_system_path)
 {
   std::string tryPath =
-    SystemToolsStatic::FindName(name, userPaths, no_system_path);
+    SystemTools::FindNameImpl(name, userPaths, no_system_path);
   if (!tryPath.empty() && !SystemTools::FileIsDirectory(tryPath)) {
     return SystemTools::CollapseFullPath(tryPath);
   }
@@ -2925,7 +2916,7 @@ std::string SystemTools::FindDirectory(
   bool no_system_path)
 {
   std::string tryPath =
-    SystemToolsStatic::FindName(name, userPaths, no_system_path);
+    SystemTools::FindNameImpl(name, userPaths, no_system_path);
   if (!tryPath.empty() && SystemTools::FileIsDirectory(tryPath)) {
     return SystemTools::CollapseFullPath(tryPath);
   }

@@ -1030,6 +1030,14 @@ private:
 
   static void ReplaceStringImpl(std::string& source, char const* replace,
                                 size_t replaceSize, std::string const& with);
+  /**
+   * Find a filename (file or directory) in the system PATH, with
+   * optional extra paths.
+   */
+  static std::string FindNameImpl(
+    std::string const& name,
+    std::vector<std::string> const& userPaths = std::vector<std::string>(),
+    bool no_system_path = false);
 
   friend class SystemToolsStatic;
   friend class SystemToolsManager;
