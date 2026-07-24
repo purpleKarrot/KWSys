@@ -47,6 +47,13 @@ namespace @KWSYS_NAMESPACE@ {
 class SystemToolsStatic;
 #endif
 
+#if defined(__VMS) || defined(_WIN32)
+#  define @KWSYS_NAMESPACE@_NEED_SYSTEM_TOOLS_MANAGER 1
+#else
+#  define @KWSYS_NAMESPACE@_NEED_SYSTEM_TOOLS_MANAGER 0
+#endif
+
+#if @KWSYS_NAMESPACE@_NEED_SYSTEM_TOOLS_MANAGER
 /** \class SystemToolsManager
  * \brief Use to make sure SystemTools is initialized before it is used
  * and is the last static object destroyed
@@ -65,6 +72,7 @@ public:
 // SystemTools. It will make sure SystemTools is initialized
 // before it is used and is the last static object destroyed.
 static SystemToolsManager SystemToolsManagerInstance;
+#endif
 
 // Flags for use with TestFileAccess.  Use a typedef in case any operating
 // system in the future needs a special type.  These are flags that may be
@@ -1010,6 +1018,7 @@ public:
   static std::string DecodeURL(std::string const& url);
 
 private:
+#if @KWSYS_NAMESPACE@_NEED_SYSTEM_TOOLS_MANAGER
   static void ClassInitialize();
   static void ClassFinalize();
 
@@ -1020,6 +1029,7 @@ private:
   {
     return &SystemToolsManagerInstance;
   }
+#endif
 
   static void ReplaceStringImpl(std::string& source, char const* replace,
                                 size_t replaceSize, std::string const& with);
@@ -1035,7 +1045,9 @@ private:
 #ifdef _WIN32
   friend class SystemToolsStatic;
 #endif
+#if @KWSYS_NAMESPACE@_NEED_SYSTEM_TOOLS_MANAGER
   friend class SystemToolsManager;
+#endif
 };
 
 } // namespace @KWSYS_NAMESPACE@

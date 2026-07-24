@@ -4550,6 +4550,13 @@ std::string SystemTools::DecodeURL(std::string const& url)
   return ret;
 }
 
+#if defined(__VMS) || defined(_WIN32)
+#  define KWSYS_NEED_SYSTEM_TOOLS_MANAGER 1
+#else
+#  define KWSYS_NEED_SYSTEM_TOOLS_MANAGER 0
+#endif
+
+#if KWSYS_NEED_SYSTEM_TOOLS_MANAGER
 // ----------------------------------------------------------------------
 // Do NOT initialize.  Default initialization to zero is necessary.
 static unsigned int SystemToolsManagerCount;
@@ -4574,7 +4581,7 @@ SystemToolsManager::~SystemToolsManager()
   }
 }
 
-#if defined(__VMS)
+#  if defined(__VMS)
 // On VMS we configure the run time C library to be more UNIX like.
 // https://h71000.www7.hp.com/doc/732final/5763/5763pro_004.html
 extern "C" int decc$feature_get_index(char* name);
@@ -4586,26 +4593,27 @@ static int SetVMSFeature(char* name, int value)
   i = decc$feature_get_index(name);
   return i >= 0 && (decc$feature_set_value(i, 1, value) >= 0 || errno == 0);
 }
-#endif
+#  endif
 
 void SystemTools::ClassInitialize()
 {
-#ifdef __VMS
+#  ifdef __VMS
   SetVMSFeature("DECC$FILENAME_UNIX_ONLY", 1);
-#endif
+#  endif
 
-#ifdef _WIN32
+#  ifdef _WIN32
   // Create statics singleton instance
   SystemToolsStatics = new SystemToolsStatic;
-#endif
+#  endif
 }
 
 void SystemTools::ClassFinalize()
 {
-#ifdef _WIN32
+#  ifdef _WIN32
   delete SystemToolsStatics;
-#endif
+#  endif
 }
+#endif
 
 } // namespace KWSYS_NAMESPACE
 
