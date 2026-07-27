@@ -1252,7 +1252,8 @@ bool SystemTools::DeleteRegistryValue(std::string const& key, KeyWOW64 view)
                     &hKey) != ERROR_SUCCESS) {
     return false;
   } else {
-    if (RegDeleteValue(hKey, (LPTSTR)valuename.c_str()) == ERROR_SUCCESS) {
+    if (RegDeleteValueW(hKey, Encoding::ToWide(valuename).c_str()) ==
+        ERROR_SUCCESS) {
       RegCloseKey(hKey);
       return true;
     }
