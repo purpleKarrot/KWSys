@@ -2604,24 +2604,20 @@ Status SystemTools::CopyADirectory(std::string const& source,
 }
 
 // return size of file; also returns zero if no file exists
-unsigned long SystemTools::FileLength(std::string const& filename)
+unsigned long long SystemTools::FileLength(std::string const& filename)
 {
-  unsigned long length = 0;
+  unsigned long long length = 0;
 #ifdef _WIN32
   WIN32_FILE_ATTRIBUTE_DATA fs;
   if (GetFileAttributesExW(Encoding::ToWindowsExtendedPath(filename).c_str(),
                            GetFileExInfoStandard, &fs) != 0) {
-    /* To support the full 64-bit file size, use fs.nFileSizeHigh
-     * and fs.nFileSizeLow to construct the 64 bit size
-
-    length = ((__int64)fs.nFileSizeHigh << 32) + fs.nFileSizeLow;
-     */
-    length = static_cast<unsigned long>(fs.nFileSizeLow);
+    length = (static_cast<unsigned long long>(fs.nFileSizeHigh) << 32) +
+      fs.nFileSizeLow;
   }
 #else
   struct stat fs;
   if (stat(filename.c_str(), &fs) == 0) {
-    length = static_cast<unsigned long>(fs.st_size);
+    length = static_cast<unsigned long long>(fs.st_size);
   }
 #endif
   return length;
