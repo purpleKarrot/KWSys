@@ -2187,11 +2187,17 @@ SystemTools::CopyStatus SystemTools::CopyFileIfNewer(
   }
 }
 
-#define KWSYS_ST_BUFFER 4096
+// 4 KiB. This value is historical.
+#define KWSYS_ST_STACK_BUFFER (1 << 12)
+// 1 MiB. This seems to be the maximum value that modern Windows CopyFile uses.
+#define KWSYS_ST_HEAP_BUFFER (1 << 20)
+// 16 KiB. This seems roughly appropriate.
+#define KWSYS_ST_HEAP_SWITCHOVER (1 << 14)
 
 bool SystemTools::FilesDiffer(std::string const& source,
                               std::string const& destination)
 {
+  // Get the size of the files. If they are different sizes, they differ.
 
 #if defined(_WIN32)
   WIN32_FILE_ATTRIBUTE_DATA statSource;
@@ -2215,8 +2221,9 @@ bool SystemTools::FilesDiffer(std::string const& source,
   if (statSource.nFileSizeHigh == 0 && statSource.nFileSizeLow == 0) {
     return false;
   }
-  auto nleft =
-    ((__int64)statSource.nFileSizeHigh << 32) + statSource.nFileSizeLow;
+  auto const fileSize =
+    (static_cast<unsigned long long>(statSource.nFileSizeHigh) << 32) +
+    statSource.nFileSizeLow;
 
 #else
 
@@ -2237,7 +2244,7 @@ bool SystemTools::FilesDiffer(std::string const& source,
   if (statSource.st_size == 0) {
     return false;
   }
-  off_t nleft = statSource.st_size;
+  auto const fileSize = static_cast<unsigned long long>(statSource.st_size);
 #endif
 
 #if defined(_WIN32)
@@ -2252,14 +2259,31 @@ bool SystemTools::FilesDiffer(std::string const& source,
     return true;
   }
 
+  // Prepare the buffers for reading the files. Use stack buffers for small
+  // files and heap buffers for large files.
+  std::vector<char> heapBuffer;
+  char sourceStackBuffer[KWSYS_ST_STACK_BUFFER];
+  char destStackBuffer[KWSYS_ST_STACK_BUFFER];
+  char* source_buf;
+  char* dest_buf;
+  auto const bufferSize = static_cast<size_t>(
+    fileSize < KWSYS_ST_HEAP_SWITCHOVER ? KWSYS_ST_STACK_BUFFER
+      : fileSize < KWSYS_ST_HEAP_BUFFER ? fileSize
+                                        : KWSYS_ST_HEAP_BUFFER);
+  if (bufferSize <= KWSYS_ST_STACK_BUFFER) {
+    source_buf = sourceStackBuffer;
+    dest_buf = destStackBuffer;
+  } else {
+    heapBuffer.resize(bufferSize * 2);
+    source_buf = heapBuffer.data();
+    dest_buf = source_buf + bufferSize;
+  }
+
   // Compare the files a block at a time.
-  char source_buf[KWSYS_ST_BUFFER];
-  char dest_buf[KWSYS_ST_BUFFER];
-  while (nleft > 0) {
+  for (auto nleft = fileSize; nleft > 0;) {
     // Read a block from each file.
-    std::streamsize nnext = (nleft > KWSYS_ST_BUFFER)
-      ? KWSYS_ST_BUFFER
-      : static_cast<std::streamsize>(nleft);
+    auto nnext =
+      static_cast<std::streamsize>(nleft > bufferSize ? bufferSize : nleft);
     finSource.read(source_buf, nnext);
     finDestination.read(dest_buf, nnext);
 
@@ -2331,16 +2355,32 @@ SystemTools::CopyStatus SystemTools::CopyFileContentBlockwise(
     return CopyStatus{ Status::POSIX_errno(), CopyStatus::DestPath };
   }
 
+  // Attempt to get the size of the source file. Failure (0) is tolerated.
+  auto const fileSize = FileLength(source);
+
+  // Prepare the buffer for reading the file. Use a stack buffer for small
+  // files and a heap buffer for large files.
+  std::vector<char> heapBuffer;
+  char stackBuffer[KWSYS_ST_STACK_BUFFER];
+  char* buffer;
+  auto const bufferSize = static_cast<size_t>(
+    fileSize < KWSYS_ST_HEAP_SWITCHOVER ? KWSYS_ST_STACK_BUFFER
+      : fileSize < KWSYS_ST_HEAP_BUFFER ? fileSize
+                                        : KWSYS_ST_HEAP_BUFFER);
+  if (bufferSize <= KWSYS_ST_STACK_BUFFER) {
+    buffer = stackBuffer;
+  } else {
+    heapBuffer.resize(bufferSize);
+    buffer = heapBuffer.data();
+  }
+
   // This copy loop is very sensitive on certain platforms with
   // slightly broken stream libraries (like HPUX).  Normally, it is
   // incorrect to not check the error condition on the fin.read()
   // before using the data, but the fin.gcount() will be zero if an
   // error occurred.  Therefore, the loop should be safe everywhere.
   while (fin) {
-    int const bufferSize = KWSYS_ST_BUFFER;
-    char buffer[bufferSize];
-
-    fin.read(buffer, bufferSize);
+    fin.read(buffer, static_cast<std::streamsize>(bufferSize));
     if (fin.gcount()) {
       fout.write(buffer, fin.gcount());
     } else {
