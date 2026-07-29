@@ -2337,7 +2337,7 @@ SystemTools::CopyStatus SystemTools::CopyFileContentBlockwise(
   // before using the data, but the fin.gcount() will be zero if an
   // error occurred.  Therefore, the loop should be safe everywhere.
   while (fin) {
-    int const bufferSize = 4096;
+    int const bufferSize = KWSYS_ST_BUFFER;
     char buffer[bufferSize];
 
     fin.read(buffer, bufferSize);
