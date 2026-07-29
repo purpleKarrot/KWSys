@@ -2259,25 +2259,14 @@ bool SystemTools::FilesDiffer(std::string const& source,
     return true;
   }
 
-  // Prepare the buffers for reading the files. Use stack buffers for small
-  // files and heap buffers for large files.
+  // Prepare the buffers for reading the files. Use stack buffers for the first
+  // comparison regardless of file size for a quick exit for early differences.
   std::vector<char> heapBuffer;
   char sourceStackBuffer[KWSYS_ST_STACK_BUFFER];
   char destStackBuffer[KWSYS_ST_STACK_BUFFER];
-  char* source_buf;
-  char* dest_buf;
-  auto const bufferSize = static_cast<size_t>(
-    fileSize < KWSYS_ST_HEAP_SWITCHOVER ? KWSYS_ST_STACK_BUFFER
-      : fileSize < KWSYS_ST_HEAP_BUFFER ? fileSize
-                                        : KWSYS_ST_HEAP_BUFFER);
-  if (bufferSize <= KWSYS_ST_STACK_BUFFER) {
-    source_buf = sourceStackBuffer;
-    dest_buf = destStackBuffer;
-  } else {
-    heapBuffer.resize(bufferSize * 2);
-    source_buf = heapBuffer.data();
-    dest_buf = source_buf + bufferSize;
-  }
+  char* source_buf = sourceStackBuffer;
+  char* dest_buf = destStackBuffer;
+  size_t bufferSize = KWSYS_ST_STACK_BUFFER;
 
   // Compare the files a block at a time.
   for (auto nleft = fileSize; nleft > 0;) {
@@ -2302,6 +2291,16 @@ bool SystemTools::FilesDiffer(std::string const& source,
 
     // Update the byte count remaining.
     nleft -= nnext;
+
+    // Switch from stack buffers to heap buffers if we haven't already and
+    // enough file size remains.
+    if (heapBuffer.empty() && nleft > KWSYS_ST_HEAP_SWITCHOVER) {
+      bufferSize = static_cast<size_t>(
+        nleft < KWSYS_ST_HEAP_BUFFER ? nleft : KWSYS_ST_HEAP_BUFFER);
+      heapBuffer.resize(bufferSize * 2);
+      source_buf = heapBuffer.data();
+      dest_buf = source_buf + bufferSize;
+    }
   }
 
   // No differences found.
