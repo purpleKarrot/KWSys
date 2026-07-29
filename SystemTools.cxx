@@ -2269,10 +2269,11 @@ bool SystemTools::FilesDiffer(std::string const& source,
   size_t bufferSize = KWSYS_ST_STACK_BUFFER;
 
   // Compare the files a block at a time.
+  auto blockSize = bufferSize;
   for (auto nleft = fileSize; nleft > 0;) {
     // Read a block from each file.
     auto nnext =
-      static_cast<std::streamsize>(nleft > bufferSize ? bufferSize : nleft);
+      static_cast<std::streamsize>(nleft > blockSize ? blockSize : nleft);
     finSource.read(source_buf, nnext);
     finDestination.read(dest_buf, nnext);
 
@@ -2301,6 +2302,12 @@ bool SystemTools::FilesDiffer(std::string const& source,
       source_buf = heapBuffer.data();
       dest_buf = source_buf + bufferSize;
     }
+
+    // Buffer size allowing, scale up the block size. The more bytes we've seen
+    // without difference, the less likely the following bytes will differ, so
+    // the larger the optimal block size that balances the number of reads with
+    // the number of wasted bytes read beyond the first difference.
+    blockSize = bufferSize < blockSize * 2 ? bufferSize : blockSize * 2;
   }
 
   // No differences found.
