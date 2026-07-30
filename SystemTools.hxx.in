@@ -362,15 +362,6 @@ public:
   static char const* GetExecutableExtension();
 
   /**
-   * Given a path on a Windows machine, return the actual case of
-   * the path as it exists on disk.  Path components that do not
-   * exist on disk are returned unchanged.  Relative paths are always
-   * returned unchanged.  Drive letters are always made upper case.
-   * This does nothing on non-Windows systems but return the path.
-   */
-  static std::string GetActualCaseForPath(std::string const& path);
-
-  /**
    * Given the path to a program executable, get the directory part of
    * the path with the file stripped off.  If there is no directory
    * part, the empty string is returned.
