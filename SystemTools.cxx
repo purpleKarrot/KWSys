@@ -2247,21 +2247,21 @@ bool SystemTools::FilesDiffer(std::string const& source,
   auto const fileSize = static_cast<unsigned long long>(statSource.st_size);
 #endif
 
-#if defined(_WIN32)
-  kwsys::ifstream finSource(source.c_str(), (std::ios::binary | std::ios::in));
-  kwsys::ifstream finDestination(destination.c_str(),
-                                 (std::ios::binary | std::ios::in));
-#else
-  kwsys::ifstream finSource(source.c_str());
-  kwsys::ifstream finDestination(destination.c_str());
-#endif
-  if (!finSource || !finDestination) {
+  // Open the files using C I/O to avoid `fstream`'s internal buffer.
+  FILE* const fSource = Fopen(source.c_str(), "rb");
+  if (!fSource) {
+    return true;
+  }
+  FILE* const fDestination = Fopen(destination.c_str(), "rb");
+  if (!fDestination) {
+    fclose(fSource);
     return true;
   }
 
   // Prepare the buffers for reading the files. Use stack buffers for the first
   // comparison regardless of file size for a quick exit for early differences.
-  std::vector<char> heapBuffer;
+  char* heapBuffer = nullptr;
+  bool triedHeapBuffer = false;
   char sourceStackBuffer[KWSYS_ST_STACK_BUFFER];
   char destStackBuffer[KWSYS_ST_STACK_BUFFER];
   char* source_buf = sourceStackBuffer;
@@ -2270,37 +2270,46 @@ bool SystemTools::FilesDiffer(std::string const& source,
 
   // Compare the files a block at a time.
   auto blockSize = bufferSize;
-  for (auto nleft = fileSize; nleft > 0;) {
+  auto nleft = fileSize;
+  while (true) {
     // Read a block from each file.
-    auto nnext =
-      static_cast<std::streamsize>(nleft > blockSize ? blockSize : nleft);
-    finSource.read(source_buf, nnext);
-    finDestination.read(dest_buf, nnext);
-
     // If either failed to read assume they are different.
-    if (static_cast<std::streamsize>(finSource.gcount()) != nnext ||
-        static_cast<std::streamsize>(finDestination.gcount()) != nnext) {
-      return true;
+    auto nnext = static_cast<size_t>(nleft > blockSize ? blockSize : nleft);
+    if (fread(source_buf, 1, nnext, fSource) != nnext) {
+      break;
+    }
+    if (fread(dest_buf, 1, nnext, fDestination) != nnext) {
+      break;
     }
 
     // If this block differs the file differs.
     if (memcmp(static_cast<void const*>(source_buf),
-               static_cast<void const*>(dest_buf),
-               static_cast<size_t>(nnext)) != 0) {
-      return true;
+               static_cast<void const*>(dest_buf), nnext) != 0) {
+      break;
     }
 
     // Update the byte count remaining.
     nleft -= nnext;
 
-    // Switch from stack buffers to heap buffers if we haven't already and
-    // enough file size remains.
-    if (heapBuffer.empty() && nleft > KWSYS_ST_HEAP_SWITCHOVER) {
-      bufferSize = static_cast<size_t>(
-        nleft < KWSYS_ST_HEAP_BUFFER ? nleft : KWSYS_ST_HEAP_BUFFER);
-      heapBuffer.resize(bufferSize * 2);
-      source_buf = heapBuffer.data();
-      dest_buf = source_buf + bufferSize;
+    // If no bytes remain, the files are the same.
+    if (nleft == 0) {
+      break;
+    }
+
+    // Switch from stack buffers to heap buffers if we haven't already tried,
+    // enough file size remains, and the allocation succeeds.
+    if (!triedHeapBuffer && nleft > KWSYS_ST_HEAP_SWITCHOVER) {
+      triedHeapBuffer = true;
+      auto heapBufferSize = 2 *
+        static_cast<size_t>(nleft < KWSYS_ST_HEAP_BUFFER
+                              ? nleft
+                              : KWSYS_ST_HEAP_BUFFER);
+      heapBuffer = static_cast<char*>(malloc(heapBufferSize));
+      if (heapBuffer) {
+        bufferSize = heapBufferSize / 2;
+        source_buf = heapBuffer;
+        dest_buf = source_buf + bufferSize;
+      }
     }
 
     // Buffer size allowing, scale up the block size. The more bytes we've seen
@@ -2310,8 +2319,12 @@ bool SystemTools::FilesDiffer(std::string const& source,
     blockSize = bufferSize < blockSize * 2 ? bufferSize : blockSize * 2;
   }
 
-  // No differences found.
-  return false;
+  // Free resources.
+  free(heapBuffer);
+  fclose(fDestination);
+  fclose(fSource);
+
+  return nleft > 0;
 }
 
 bool SystemTools::TextFilesDiffer(std::string const& path1,
@@ -2343,66 +2356,64 @@ bool SystemTools::TextFilesDiffer(std::string const& path1,
 SystemTools::CopyStatus SystemTools::CopyFileContentBlockwise(
   std::string const& source, std::string const& destination)
 {
-  // Open files
-  kwsys::ifstream fin(source.c_str(), std::ios::in | std::ios::binary);
-  if (!fin) {
-    return CopyStatus{ Status::POSIX_errno(), CopyStatus::SourcePath };
-  }
-
   // try and remove the destination file so that read only destination files
   // can be written to.
   // If the remove fails continue so that files in read only directories
   // that do not allow file removal can be modified.
   SystemTools::RemoveFile(destination);
 
-  kwsys::ofstream fout(destination.c_str(),
-                       std::ios::out | std::ios::trunc | std::ios::binary);
+  // Open the files using C I/O to avoid `fstream`'s internal buffer.
+  FILE* const fin = Fopen(source.c_str(), "rb");
+  if (!fin) {
+    return CopyStatus{ Status::POSIX_errno(), CopyStatus::SourcePath };
+  }
+  FILE* const fout = Fopen(destination.c_str(), "wb");
   if (!fout) {
-    return CopyStatus{ Status::POSIX_errno(), CopyStatus::DestPath };
+    auto status = Status::POSIX_errno();
+    fclose(fin);
+    return CopyStatus{ status, CopyStatus::DestPath };
   }
 
   // Attempt to get the size of the source file. Failure (0) is tolerated.
   auto const fileSize = FileLength(source);
 
   // Prepare the buffer for reading the file. Use a stack buffer for small
-  // files and a heap buffer for large files.
-  std::vector<char> heapBuffer;
+  // files and a heap buffer for large files if the allocation succeeds.
+  char* heapBuffer = nullptr;
   char stackBuffer[KWSYS_ST_STACK_BUFFER];
-  char* buffer;
-  auto const bufferSize = static_cast<size_t>(
-    fileSize < KWSYS_ST_HEAP_SWITCHOVER ? KWSYS_ST_STACK_BUFFER
-      : fileSize < KWSYS_ST_HEAP_BUFFER ? fileSize
-                                        : KWSYS_ST_HEAP_BUFFER);
-  if (bufferSize <= KWSYS_ST_STACK_BUFFER) {
-    buffer = stackBuffer;
-  } else {
-    heapBuffer.resize(bufferSize);
-    buffer = heapBuffer.data();
+  char* buffer = stackBuffer;
+  size_t bufferSize = KWSYS_ST_STACK_BUFFER;
+  if (fileSize > KWSYS_ST_HEAP_SWITCHOVER) {
+    auto heapBufferSize = static_cast<size_t>(
+      fileSize < KWSYS_ST_HEAP_BUFFER ? fileSize : KWSYS_ST_HEAP_BUFFER);
+    heapBuffer = static_cast<char*>(malloc(heapBufferSize));
+    if (heapBuffer) {
+      bufferSize = heapBufferSize;
+      buffer = heapBuffer;
+    }
   }
 
-  // This copy loop is very sensitive on certain platforms with
-  // slightly broken stream libraries (like HPUX).  Normally, it is
-  // incorrect to not check the error condition on the fin.read()
-  // before using the data, but the fin.gcount() will be zero if an
-  // error occurred.  Therefore, the loop should be safe everywhere.
-  while (fin) {
-    fin.read(buffer, static_cast<std::streamsize>(bufferSize));
-    if (fin.gcount()) {
-      fout.write(buffer, fin.gcount());
+  // Copy the file a block at a time.
+  while (!ferror(fin)) {
+    auto bytesRead = fread(buffer, 1, bufferSize, fin);
+    if (bytesRead > 0) {
+      fwrite(buffer, 1, bytesRead, fout);
     } else {
       break;
     }
   }
 
-  // Make sure the operating system has finished writing the file
-  // before closing it.  This will ensure the file is finished before
-  // the check below.
-  fout.flush();
+  // Make sure the operating system has had the chance to finish writing the
+  // file before checking its final state.
+  fflush(fout);
+  bool foutError = ferror(fout);
 
-  fin.close();
-  fout.close();
+  // Free resources.
+  free(heapBuffer);
+  fclose(fout);
+  fclose(fin);
 
-  if (!fout) {
+  if (foutError) {
     return CopyStatus{ Status::POSIX_errno(), CopyStatus::DestPath };
   }
 
