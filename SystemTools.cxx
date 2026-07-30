@@ -2393,31 +2393,45 @@ SystemTools::CopyStatus SystemTools::CopyFileContentBlockwise(
     }
   }
 
-  // Copy the file a block at a time.
-  while (!ferror(fin)) {
+  auto status = Status::Success();
+  auto path = CopyStatus::NoPath;
+
+  // Copy the file a block at a time and detect short reads/writes.
+  while (status.IsSuccess()) {
     auto bytesRead = fread(buffer, 1, bufferSize, fin);
-    if (bytesRead > 0) {
-      fwrite(buffer, 1, bytesRead, fout);
-    } else {
+    if (bytesRead > 0 && fwrite(buffer, 1, bytesRead, fout) != bytesRead) {
+      status = Status::POSIX_errno();
+      path = CopyStatus::DestPath;
+      break;
+    }
+
+    if (bytesRead < bufferSize) {
+      if (ferror(fin)) {
+        status = Status::POSIX_errno();
+        path = CopyStatus::SourcePath;
+      }
       break;
     }
   }
 
-  // Make sure the operating system has had the chance to finish writing the
-  // file before checking its final state.
-  fflush(fout);
-  bool foutError = ferror(fout);
+  // Make sure the operating system has finished writing the file.
+  if (status.IsSuccess() && fflush(fout) != 0) {
+    status = Status::POSIX_errno();
+    path = CopyStatus::DestPath;
+  }
 
   // Free resources.
   free(heapBuffer);
-  fclose(fout);
-  fclose(fin);
-
-  if (foutError) {
-    return CopyStatus{ Status::POSIX_errno(), CopyStatus::DestPath };
+  if (fclose(fout) != 0 && status.IsSuccess()) {
+    status = Status::POSIX_errno();
+    path = CopyStatus::DestPath;
+  }
+  if (fclose(fin) != 0 && status.IsSuccess()) {
+    status = Status::POSIX_errno();
+    path = CopyStatus::SourcePath;
   }
 
-  return CopyStatus{ Status::Success(), CopyStatus::NoPath };
+  return CopyStatus{ status, path };
 }
 
 /**
