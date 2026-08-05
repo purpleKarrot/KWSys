@@ -61,7 +61,7 @@ namespace KWSYS_NAMESPACE {
 DynamicLoader::LibraryHandle DynamicLoader::OpenLibrary(
   std::string const& libname, int flags)
 {
-  return 0;
+  return nullptr;
 }
 
 int DynamicLoader::CloseLibrary(DynamicLoader::LibraryHandle lib)
@@ -76,7 +76,7 @@ int DynamicLoader::CloseLibrary(DynamicLoader::LibraryHandle lib)
 DynamicLoader::SymbolPointer DynamicLoader::GetSymbolAddress(
   DynamicLoader::LibraryHandle lib, std::string const& sym)
 {
-  return 0;
+  return nullptr;
 }
 
 char const* DynamicLoader::LastError()
@@ -121,7 +121,7 @@ DynamicLoader::SymbolPointer DynamicLoader::GetSymbolAddress(
    * TYPE_UNDEFINED Look for any symbol.
    */
   status = shl_findsym(&lib, sym.c_str(), TYPE_UNDEFINED, &addr);
-  void* result = (status < 0) ? (void*)0 : addr;
+  void* result = (status < 0) ? nullptr : addr;
 
   // Hack to cast pointer-to-data to pointer-to-function.
   return *reinterpret_cast<DynamicLoader::SymbolPointer*>(&result);
@@ -192,7 +192,7 @@ int DynamicLoader::CloseLibrary(DynamicLoader::LibraryHandle lib)
 DynamicLoader::SymbolPointer DynamicLoader::GetSymbolAddress(
   DynamicLoader::LibraryHandle lib, std::string const& sym)
 {
-  void* result = 0;
+  void* result = nullptr;
   // Need to prepend symbols with '_' on Apple-gcc compilers
   std::string rsym = '_' + sym;
 
@@ -207,7 +207,7 @@ DynamicLoader::SymbolPointer DynamicLoader::GetSymbolAddress(
 
 char const* DynamicLoader::LastError()
 {
-  return 0;
+  return nullptr;
 }
 
 } // namespace KWSYS_NAMESPACE
