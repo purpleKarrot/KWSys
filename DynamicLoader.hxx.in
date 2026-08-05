@@ -51,12 +51,8 @@ public:
   typedef shl_t LibraryHandle;
 #elif defined(_WIN32) && !defined(__CYGWIN__)
   typedef HMODULE LibraryHandle;
-#elif defined(__APPLE__)
-#  if MAC_OS_X_VERSION_MAX_ALLOWED < 1030
+#elif defined(__APPLE__) && (MAC_OS_X_VERSION_MAX_ALLOWED < 1030)
   typedef NSModule LibraryHandle;
-#  else
-  typedef void* LibraryHandle;
-#  endif
 #elif defined(__BEOS__)
   typedef image_id LibraryHandle;
 #else // POSIX
