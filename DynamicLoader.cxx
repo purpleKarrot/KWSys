@@ -30,16 +30,16 @@
 // Each part of the ifdef contains a complete implementation for
 // the static methods of DynamicLoader.
 
-#define CHECK_OPEN_FLAGS(var, supported, ret)                                 \
+#define CHECK_OPEN_FLAGS(var, supported)                                      \
   do {                                                                        \
     /* Check for unknown flags. */                                            \
     if ((var & AllOpenFlags) != var) {                                        \
-      return ret;                                                             \
+      return InvalidLibrary;                                                  \
     }                                                                         \
                                                                               \
     /* Check for unsupported flags. */                                        \
     if ((var & (supported)) != var) {                                         \
-      return ret;                                                             \
+      return InvalidLibrary;                                                  \
     }                                                                         \
   } while (0)
 
@@ -61,7 +61,7 @@ namespace KWSYS_NAMESPACE {
 DynamicLoader::LibraryHandle DynamicLoader::OpenLibrary(
   std::string const& libname, int flags)
 {
-  return nullptr;
+  return InvalidLibrary;
 }
 
 int DynamicLoader::CloseLibrary(DynamicLoader::LibraryHandle lib)
@@ -96,7 +96,7 @@ namespace KWSYS_NAMESPACE {
 DynamicLoader::LibraryHandle DynamicLoader::OpenLibrary(
   std::string const& libname, int flags)
 {
-  CHECK_OPEN_FLAGS(flags, 0, 0);
+  CHECK_OPEN_FLAGS(flags, 0);
 
   return shl_load(libname.c_str(), BIND_DEFERRED | DYNAMIC_PATH, 0L);
 }
@@ -161,7 +161,7 @@ namespace KWSYS_NAMESPACE {
 DynamicLoader::LibraryHandle DynamicLoader::OpenLibrary(
   std::string const& libname, int flags)
 {
-  CHECK_OPEN_FLAGS(flags, 0, 0);
+  CHECK_OPEN_FLAGS(flags, 0);
 
   NSObjectFileImageReturnCode rc;
   NSObjectFileImage image = 0;
@@ -169,7 +169,7 @@ DynamicLoader::LibraryHandle DynamicLoader::OpenLibrary(
   rc = NSCreateObjectFileImageFromFile(libname.c_str(), &image);
   // rc == NSObjectFileImageInappropriateFile when trying to load a dylib file
   if (rc != NSObjectFileImageSuccess) {
-    return 0;
+    return InvalidLibrary;
   }
   NSModule handle = NSLinkModule(image, libname.c_str(),
                                  NSLINKMODULE_OPTION_BINDNOW |
@@ -223,7 +223,7 @@ namespace KWSYS_NAMESPACE {
 DynamicLoader::LibraryHandle DynamicLoader::OpenLibrary(
   std::string const& libname, int flags)
 {
-  CHECK_OPEN_FLAGS(flags, SearchBesideLibrary, nullptr);
+  CHECK_OPEN_FLAGS(flags, SearchBesideLibrary);
 
   DWORD llFlags = 0;
   if (flags & SearchBesideLibrary) {
@@ -310,14 +310,14 @@ static image_id last_dynamic_err = B_OK;
 DynamicLoader::LibraryHandle DynamicLoader::OpenLibrary(
   std::string const& libname, int flags)
 {
-  CHECK_OPEN_FLAGS(flags, 0, 0);
+  CHECK_OPEN_FLAGS(flags, 0);
 
   // image_id's are integers, errors are negative. Add one just in case we
   //  get a valid image_id of zero (is that even possible?).
   image_id rc = load_add_on(libname.c_str());
   if (rc < 0) {
     last_dynamic_err = rc;
-    return 0;
+    return InvalidLibrary;
   }
 
   return rc + 1;
@@ -390,7 +390,7 @@ namespace KWSYS_NAMESPACE {
 DynamicLoader::LibraryHandle DynamicLoader::OpenLibrary(
   std::string const& libname, int flags)
 {
-  CHECK_OPEN_FLAGS(flags, 0, nullptr);
+  CHECK_OPEN_FLAGS(flags, 0);
 
   char* name = (char*)calloc(1, libname.size() + 1);
   dld_init(program_invocation_name);
@@ -436,7 +436,7 @@ namespace KWSYS_NAMESPACE {
 DynamicLoader::LibraryHandle DynamicLoader::OpenLibrary(
   std::string const& libname, int flags)
 {
-  CHECK_OPEN_FLAGS(flags, RTLDGlobal, nullptr);
+  CHECK_OPEN_FLAGS(flags, RTLDGlobal);
 
   int llFlags = RTLD_LAZY;
   if (flags & RTLDGlobal) {
