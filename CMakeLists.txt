@@ -895,6 +895,9 @@ endif()
 if(WIN32)
   # Help enforce the use of wide Windows apis.
   add_compile_definitions(UNICODE _UNICODE)
+
+  # Minimize "windows.h".  We include granular Windows SDK headers as needed.
+  add_compile_definitions(WIN32_LEAN_AND_MEAN)
 endif()
 
 if(KWSYS_USE_String)
