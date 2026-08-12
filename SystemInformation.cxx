@@ -4003,6 +4003,7 @@ std::string SystemInformationImplementation::GetProgramStack(int firstFrame,
     }
   }
   free(symbol);
+  SymCleanup(process);
 
 #else
   programStack += ""
