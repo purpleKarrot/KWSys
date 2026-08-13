@@ -3985,7 +3985,7 @@ std::string SystemInformationImplementation::GetProgramStack(int firstFrame,
   // save the caller's options and restore them before returning.
   DWORD options = SymGetOptions();
   SymSetOptions(options | SYMOPT_UNDNAME | SYMOPT_DEFERRED_LOADS |
-                SYMOPT_LOAD_LINES | SYMOPT_EXACT_SYMBOLS);
+                SYMOPT_LOAD_LINES);
   SymInitialize(process, nullptr, TRUE);
   WORD numberOfFrames =
     CaptureStackBackTrace(firstFrame, TRACE_MAX_STACK_FRAMES, stack, nullptr);
@@ -4000,29 +4000,54 @@ std::string SystemInformationImplementation::GetProgramStack(int firstFrame,
   line.SizeOfStruct = sizeof(IMAGEHLP_LINE64);
   for (int i = 0; i < numberOfFrames; i++) {
     DWORD64 address = reinterpret_cast<DWORD64>(stack[i]);
-    // SYMOPT_EXACT_SYMBOLS makes SymFromAddr fail unless the address lies
-    // within the returned symbol's range, so a non-exported function cannot
-    // be misreported as an unrelated preceding export.
-    bool resolved = SymFromAddr(process, address, nullptr, symbol) != FALSE;
-    if (resolved &&
+    DWORD64 symDisplacement = 0;
+    bool haveName =
+      SymFromAddr(process, address, &symDisplacement, symbol) != FALSE;
+    DWORD64 moduleBase = SymGetModuleBase64(process, address);
+    // When a module has no matching PDB, dbghelp falls back to its export
+    // table and reports the nearest preceding export, which is generally not
+    // the (non-exported) function the address really belongs to. Names are
+    // only exact when real debug info was loaded for the module, so ask the
+    // module how its symbols were obtained rather than trusting the name.
+    // Inexact names are still printed, but marked and always accompanied by
+    // the module-relative address so they cannot be mistaken for the truth.
+    bool exactName = haveName;
+    if (exactName) {
+      IMAGEHLP_MODULE64 moduleInfo;
+      memset(&moduleInfo, 0, sizeof(moduleInfo));
+      moduleInfo.SizeOfStruct = sizeof(moduleInfo);
+      if (!SymGetModuleInfo64(process, address, &moduleInfo) ||
+          moduleInfo.SymType == SymNone || moduleInfo.SymType == SymExport ||
+          moduleInfo.SymType == SymDeferred) {
+        exactName = false;
+      }
+    }
+    if (exactName &&
         SymGetLineFromAddr64(process, address, &displacement, &line)) {
       oss << " at " << symbol->Name << " in " << line.FileName << " line "
           << line.LineNumber << std::endl;
-    } else if (resolved) {
-      oss << " at " << symbol->Name << std::endl;
+    } else if (exactName) {
+      oss << " at " << symbol->Name << "+0x" << std::hex << symDisplacement
+          << std::dec << std::endl;
     } else {
-      // No reliable symbol name is available; report the module containing
-      // the address together with the raw address.
+      // Report the module containing the address together with the offset
+      // into that module, which is what a disassembler needs, plus the
+      // nearest export as an approximate location hint when one is known.
       wchar_t modulePath[MAX_PATH];
       DWORD64 moduleBase = SymGetModuleBase64(process, address);
       if (moduleBase &&
           GetModuleFileNameW(reinterpret_cast<HMODULE>(moduleBase), modulePath,
                              MAX_PATH) > 0) {
-        oss << " at " << modulePath << "!" << std::hex << address << std::dec
-            << std::endl;
+        oss << " at " << modulePath << "+0x" << std::hex
+            << (address - moduleBase) << std::dec;
       } else {
-        oss << " at " << std::hex << address << std::dec << std::endl;
+        oss << " at 0x" << std::hex << address << std::dec;
       }
+      if (haveName) {
+        oss << " (near " << symbol->Name << "+0x" << std::hex
+            << symDisplacement << std::dec << ")";
+      }
+      oss << std::endl;
     }
   }
   free(symbol);
