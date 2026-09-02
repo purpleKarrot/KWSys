@@ -2584,6 +2584,14 @@ typedef struct _PROCESSOR_POWER_INFORMATION
   ULONG MaxIdleState;
   ULONG CurrentIdleState;
 } PROCESSOR_POWER_INFORMATION, *PPROCESSOR_POWER_INFORMATION;
+
+#  ifndef ALL_PROCESSOR_GROUPS
+#    define ALL_PROCESSOR_GROUPS 0xffff
+#  endif
+
+#  ifndef STATUS_BUFFER_TOO_SMALL
+#    define STATUS_BUFFER_TOO_SMALL ((NTSTATUS)0xC0000023L)
+#  endif
 #endif
 
 /** */
@@ -2592,12 +2600,38 @@ bool SystemInformationImplementation::RetrieveCPUClockSpeed()
   bool retrieved = false;
 
 #if defined(_WIN32)
-  PROCESSOR_POWER_INFORMATION powerInfo[64];
-  NTSTATUS status =
-    CallNtPowerInformation(ProcessorInformation, nullptr, 0, powerInfo,
-                           sizeof(PROCESSOR_POWER_INFORMATION) * 64);
+  // CallNtPowerInformation writes one record per logical processor; a
+  // fixed 64-entry buffer overflows across multiple processor groups.
+  using GetMaximumProcessorCountType = DWORD(WINAPI*)(WORD);
+  static GetMaximumProcessorCountType pGetMaximumProcessorCount =
+    reinterpret_cast<GetMaximumProcessorCountType>((void*)GetProcAddress(
+      GetModuleHandleW(L"kernel32"), "GetMaximumProcessorCount"));
 
-  if (status == 0) {
+  // GetMaximumProcessorCount() needs Windows 7+; older systems cap at 64.
+  DWORD processorCount = 64;
+  if (pGetMaximumProcessorCount) {
+    DWORD const maxProcessorCount =
+      pGetMaximumProcessorCount(ALL_PROCESSOR_GROUPS);
+    if (maxProcessorCount > 0) {
+      processorCount = maxProcessorCount;
+    }
+  }
+
+  std::vector<PROCESSOR_POWER_INFORMATION> powerInfo(processorCount);
+  NTSTATUS status = STATUS_BUFFER_TOO_SMALL;
+  // Grow and retry if the estimate was too small (e.g. CPU hot-add).
+  for (int attempt = 0; attempt < 4 && status == STATUS_BUFFER_TOO_SMALL;
+       ++attempt) {
+    status = CallNtPowerInformation(
+      ProcessorInformation, nullptr, 0, powerInfo.data(),
+      static_cast<ULONG>(sizeof(PROCESSOR_POWER_INFORMATION) *
+                         powerInfo.size()));
+    if (status == STATUS_BUFFER_TOO_SMALL) {
+      powerInfo.resize(powerInfo.size() * 2);
+    }
+  }
+
+  if (status == 0 && !powerInfo.empty()) {
     this->CPUSpeedInMHz = (float)powerInfo[0].MaxMhz;
     retrieved = true;
   }
