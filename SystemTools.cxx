@@ -3281,7 +3281,7 @@ static void SystemToolsAppendComponents(
 {
   static constexpr char up[] = "..";
   static constexpr char cur[] = ".";
-  for (std::vector<std::string>::const_iterator i = first; i != last; ++i) {
+  for (std::vector<std::string>::iterator i = first; i != last; ++i) {
     if (*i == up) {
       // Remove the previous component if possible.  Ignore ../ components
       // that try to go above the root.  Keep ../ components if they are
