@@ -5395,6 +5395,8 @@ bool SystemInformationImplementation::QueryBSDMemory()
 #  if defined(HW_PHYSMEM64)
   int64_t k;
   ctrl[1] = HW_PHYSMEM64;
+#  elif defined(__FreeBSD__) || defined(__DragonFly__)
+  unsigned long k;
 #  else
   int k;
 #  endif
