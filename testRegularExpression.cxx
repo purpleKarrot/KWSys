@@ -742,6 +742,16 @@ int testRegularExpression(int, char*[])
     return !assigned.is_valid();
   }());
 
+  run("api.assign_invalid_over_valid", [] {
+    kwsys::RegularExpression invalid;
+    kwsys::RegularExpression re("abc");
+    if (!re.find("xabc")) {
+      return false;
+    }
+    re = invalid;
+    return !re.is_valid() && !re.find("abc");
+  }());
+
   run("api.copy_keeps_last_match", [] {
     kwsys::RegularExpression re("(b+)");
     if (!re.find("abbc")) {
