@@ -28,6 +28,7 @@
 #  include "RegularExpression.hxx.in"
 #endif
 
+#include <algorithm>
 #include <cstdio>
 #include <cstring>
 
@@ -888,21 +889,18 @@ bool RegularExpression::find(char const* string,
     return false;
   }
 
+  char const* const end = string + size;
+
   // If there is a "must appear" string, look for it.
-  if (this->regmust) {
-    s = string + offset;
-    while ((s = strchr(s, this->regmust[0]))) {
-      if (strncmp(s, this->regmust, this->regmlen) == 0)
-        break; // Found it.
-      s++;
-    }
-    if (!s) // Not present.
-      return false;
+  if (this->regmust &&
+      std::search(string + offset, end, this->regmust,
+                  this->regmust + this->regmlen) == end) {
+    return false;
   }
 
   RegExpFind regFind;
   s = string + offset;
-  regFind.regend = string + size;
+  regFind.regend = end;
 
   // Mark beginning of line for ^ .
   regFind.regbol = (options & BOL_AT_OFFSET) ? s : string;
@@ -915,17 +913,20 @@ bool RegularExpression::find(char const* string,
   // Messy cases:  unanchored match.
   if (this->regstart != '\0')
     // We know what char it must start with.
-    while ((s = strchr(s, this->regstart))) {
+    while ((s = std::find(s, end, this->regstart)) != end) {
       if (regFind.regtry(s, rmatch.startp, rmatch.endp, this->program))
         return true;
       s++;
     }
   else
     // We don't -- general case.
-    do {
+    for (;;) {
       if (regFind.regtry(s, rmatch.startp, rmatch.endp, this->program))
         return true;
-    } while (*s++ != '\0');
+      if (s == end)
+        break;
+      ++s;
+    }
 
   // Failure.
   return false;
