@@ -871,12 +871,24 @@ bool RegularExpression::find(char const* string,
                              std::string::size_type offset,
                              unsigned options) const
 {
+  return this->find(string, strlen(string), rmatch, offset, options);
+}
+
+bool RegularExpression::find(char const* string, std::string::size_type size,
+                             RegularExpressionMatch& rmatch,
+                             std::string::size_type offset,
+                             unsigned options) const
+{
   char const* s;
 
   rmatch.clear();
+  // An empty string view may have a null data pointer.
+  if (!string) {
+    string = "";
+  }
+  size = std::find(string, string + size, '\0') - string;
   rmatch.searchstring = string;
 
-  std::string::size_type const size = strlen(string);
   if (!this->program || offset > size) {
     return false;
   }
