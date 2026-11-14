@@ -288,7 +288,6 @@ Status Directory::Load(std::string const& name, std::string* errorMessage)
 {
   this->Clear();
 
-  errno = 0;
   DIR* dir = opendir(name.c_str());
 
   if (!dir) {
@@ -301,6 +300,9 @@ Status Directory::Load(std::string const& name, std::string* errorMessage)
   errno = 0;
   for (kwsys_dirent* d = readdir(dir); d; d = readdir(dir)) {
     this->Internal->Files.emplace_back(d->d_name);
+    // Reset errno that might be set by internal code of emplace_back
+    // e.g. memory allocator, or by readdir implementation.
+    errno = 0;
   }
   if (errno != 0) {
     if (errorMessage) {
@@ -317,7 +319,6 @@ Status Directory::Load(std::string const& name, std::string* errorMessage)
 unsigned long Directory::GetNumberOfFilesInDirectory(std::string const& name,
                                                      std::string* errorMessage)
 {
-  errno = 0;
   DIR* dir = opendir(name.c_str());
 
   if (!dir) {
@@ -328,8 +329,11 @@ unsigned long Directory::GetNumberOfFilesInDirectory(std::string const& name,
   }
 
   unsigned long count = 0;
+  errno = 0;
   for (kwsys_dirent* d = readdir(dir); d; d = readdir(dir)) {
     count++;
+    // readdir can technically change errno when it returns a valid entry.
+    errno = 0;
   }
   if (errno != 0) {
     if (errorMessage) {
