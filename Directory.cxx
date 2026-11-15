@@ -291,10 +291,11 @@ Status Directory::Load(std::string const& name, std::string* errorMessage)
   DIR* dir = opendir(name.c_str());
 
   if (!dir) {
+    auto err = errno;
     if (errorMessage) {
-      *errorMessage = std::string(strerror(errno));
+      *errorMessage = std::string(strerror(err));
     }
-    return Status::POSIX_errno();
+    return Status::POSIX(err);
   }
 
   errno = 0;
@@ -305,10 +306,11 @@ Status Directory::Load(std::string const& name, std::string* errorMessage)
     errno = 0;
   }
   if (errno != 0) {
+    auto err = errno;
     if (errorMessage) {
-      *errorMessage = std::string(strerror(errno));
+      *errorMessage = std::string(strerror(err));
     }
-    return Status::POSIX_errno();
+    return Status::POSIX(err);
   }
 
   this->Internal->Path = name;
