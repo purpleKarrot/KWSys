@@ -1,0 +1,55 @@
+name: KWSys Windows dashboard
+
+on:
+  push:
+
+permissions:
+  contents: read
+
+jobs:
+  system-information:
+    name: MSVC on ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: windows-2022
+            generator: Visual Studio 17 2022
+          - runner: windows-2025
+            generator: Visual Studio 18 2026
+          - runner: windows-11-arm
+            generator: Visual Studio 18 2026
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Log ARM64 processor registry values
+        if: matrix.runner == 'windows-11-arm'
+        shell: pwsh
+        run: |
+          $key = 'HKLM\HARDWARE\DESCRIPTION\System\CentralProcessor\0'
+          foreach ($value in 'ProcessorNameString', 'VendorIdentifier', 'Identifier') {
+            reg.exe query $key /v $value /reg:64
+            if ($LASTEXITCODE -ne 0) {
+              Write-Warning "Could not read $value from $key"
+            }
+          }
+          exit 0
+
+      - uses: lukka/get-cmake@latest
+        if: matrix.runner == 'windows-2022'
+      - name: Build and Test
+        uses: chorse-dev/cmake-action@master
+        with:
+          model: Experimental
+          build-name: ${{ matrix.runner }}
+          cmake-generator: ${{ matrix.generator }}
+          config-options: -DBUILD_TESTING=ON
+          submit-url: https://ci.chorse.dev/api/submit?project=0f061fe4e6852250274ed3d786759168366c6a1cbdc1cc2dbb2d6a0e944cdb2b:kwsys
+
+      - name: Archive CTest XML
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: ctest-xml-${{ matrix.runner }}
+          path: build/Testing/**/*.xml
