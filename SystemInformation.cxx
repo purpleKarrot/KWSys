@@ -5723,6 +5723,23 @@ bool SystemInformationImplementation::QueryOSInformation()
     std::to_string(osvi.dwMinorVersion) + '.' +
     std::to_string(osvi.dwBuildNumber & 0xFFFF);
 
+  HKEY versionKey = nullptr;
+  if (osvi.dwMajorVersion >= 6 &&
+      RegOpenKeyExW(
+        HKEY_LOCAL_MACHINE, L"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion",
+        0, KEY_QUERY_VALUE | KEY_WOW64_64KEY, &versionKey) == ERROR_SUCCESS) {
+    DWORD revision = 0;
+    DWORD type = 0;
+    DWORD size = sizeof(revision);
+    if (RegQueryValueExW(versionKey, L"UBR", nullptr, &type,
+                         reinterpret_cast<BYTE*>(&revision),
+                         &size) == ERROR_SUCCESS &&
+        type == REG_DWORD && size == sizeof(revision)) {
+      this->OSRelease += '.' + std::to_string(revision);
+    }
+    RegCloseKey(versionKey);
+  }
+
   struct VersionNames
   {
     char const* workstation;
