@@ -1660,6 +1660,85 @@ SystemInformationImplementation::SystemInformationImplementation()
   this->OSIs64Bit = (sizeof(void*) == 8);
 }
 
+#if defined(_WIN32)
+namespace {
+
+/** Owns a read-only key under HKEY_LOCAL_MACHINE. */
+class WindowsRegistryKey
+{
+public:
+  /** Open a key for querying, optionally selecting a registry view. */
+  explicit WindowsRegistryKey(wchar_t const* path, REGSAM view = 0)
+  {
+    HKEY key = nullptr;
+    if (RegOpenKeyExW(HKEY_LOCAL_MACHINE, path, 0, KEY_QUERY_VALUE | view,
+                      &key) == ERROR_SUCCESS) {
+      this->Key = key;
+    }
+  }
+
+  /** Close the key if it was opened. */
+  ~WindowsRegistryKey()
+  {
+    if (this->Key) {
+      RegCloseKey(this->Key);
+    }
+  }
+
+  WindowsRegistryKey(WindowsRegistryKey const&) = delete;
+  WindowsRegistryKey& operator=(WindowsRegistryKey const&) = delete;
+
+  /** Return whether the key was opened. */
+  explicit operator bool() const { return this->Key != nullptr; }
+
+  /** Read a REG_SZ value, returning an empty string on failure. */
+  std::string ReadString(wchar_t const* value) const
+  {
+    DWORD type = 0;
+    DWORD size = 0;
+    if (!this->Key ||
+        RegQueryValueExW(this->Key, value, nullptr, &type, nullptr, &size) !=
+          ERROR_SUCCESS ||
+        type != REG_SZ || size % sizeof(wchar_t) != 0) {
+      return {};
+    }
+
+    // RegQueryValueExW can return string data without a terminating null.
+    std::vector<wchar_t> buffer(size / sizeof(wchar_t) + 1);
+    if (RegQueryValueExW(this->Key, value, nullptr, &type,
+                         reinterpret_cast<BYTE*>(buffer.data()),
+                         &size) != ERROR_SUCCESS ||
+        type != REG_SZ || size % sizeof(wchar_t) != 0) {
+      return {};
+    }
+
+    return Encoding::ToNarrow(buffer.data());
+  }
+
+  /** Read a REG_DWORD value, assigning the result only on success. */
+  bool ReadDword(wchar_t const* value, DWORD& result) const
+  {
+    DWORD type = 0;
+    DWORD data = 0;
+    DWORD size = sizeof(data);
+    if (!this->Key ||
+        RegQueryValueExW(this->Key, value, nullptr, &type,
+                         reinterpret_cast<BYTE*>(&data),
+                         &size) != ERROR_SUCCESS ||
+        type != REG_DWORD || size != sizeof(data)) {
+      return false;
+    }
+    result = data;
+    return true;
+  }
+
+private:
+  HKEY Key = nullptr;
+};
+
+} // namespace
+#endif
+
 void SystemInformationImplementation::RunCPUCheck()
 {
 #ifdef _WIN32
@@ -2832,27 +2911,12 @@ bool SystemInformationImplementation::RetrieveCPUClockSpeed()
   // If RDTSC is not supported, we fallback to trying to read this value
   // from the registry:
   if (!retrieved) {
-    HKEY hKey = nullptr;
-    LONG err =
-      RegOpenKeyExW(HKEY_LOCAL_MACHINE,
-                    L"HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0", 0,
-                    KEY_READ, &hKey);
-
-    if (ERROR_SUCCESS == err) {
-      DWORD dwType = 0;
-      DWORD data = 0;
-      DWORD dwSize = sizeof(DWORD);
-
-      err =
-        RegQueryValueExW(hKey, L"~MHz", 0, &dwType, (LPBYTE)&data, &dwSize);
-
-      if (ERROR_SUCCESS == err) {
-        this->CPUSpeedInMHz = (float)data;
-        retrieved = true;
-      }
-
-      RegCloseKey(hKey);
-      hKey = nullptr;
+    WindowsRegistryKey key(
+      L"HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0");
+    DWORD data = 0;
+    if (key.ReadDword(L"~MHz", data)) {
+      this->CPUSpeedInMHz = static_cast<float>(data);
+      retrieved = true;
     }
   }
 #endif
@@ -5723,29 +5787,14 @@ bool SystemInformationImplementation::QueryOSInformation()
     std::to_string(osvi.dwMinorVersion) + '.' +
     std::to_string(osvi.dwBuildNumber & 0xFFFF);
 
-  HKEY versionKey = nullptr;
-  if (osvi.dwMajorVersion >= 6 &&
-      RegOpenKeyExW(
-        HKEY_LOCAL_MACHINE, L"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion",
-        0, KEY_QUERY_VALUE | KEY_WOW64_64KEY, &versionKey) == ERROR_SUCCESS) {
+  if (osvi.dwMajorVersion >= 6) {
+    WindowsRegistryKey key(
+      L"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion", KEY_WOW64_64KEY);
     DWORD revision = 0;
-    DWORD type = 0;
-    DWORD size = sizeof(revision);
-    if (RegQueryValueExW(versionKey, L"UBR", nullptr, &type,
-                         reinterpret_cast<BYTE*>(&revision),
-                         &size) == ERROR_SUCCESS &&
-        type == REG_DWORD && size == sizeof(revision)) {
+    if (key.ReadDword(L"UBR", revision)) {
       this->OSRelease += '.' + std::to_string(revision);
     }
-    wchar_t name[256] = {};
-    size = sizeof(name) - sizeof(name[0]);
-    if (RegQueryValueExW(versionKey, L"ProductName", nullptr, &type,
-                         reinterpret_cast<BYTE*>(name),
-                         &size) == ERROR_SUCCESS &&
-        type == REG_SZ && size % sizeof(name[0]) == 0) {
-      this->OSVersion = Encoding::ToNarrow(name);
-    }
-    RegCloseKey(versionKey);
+    this->OSVersion = key.ReadString(L"ProductName");
   }
 
   if (!this->OSVersion.empty()) {
