@@ -1771,9 +1771,12 @@ void SystemInformationImplementation::RunCPUCheck()
     RetrieveClassicalCPUClockSpeed();
   }
 
+  this->CPUCountWindows();
+
   if (supportsCPUID) {
-    // Retrieve cache information.
-    if (!RetrieveCPUCacheDetails()) {
+    // Fall back to CPUID if Windows did not report any usable cache sizes.
+    if (this->Features.L1CacheSize == -1 && this->Features.L2CacheSize == -1 &&
+        this->Features.L3CacheSize == -1 && !RetrieveCPUCacheDetails()) {
       RetrieveClassicalCPUCacheDetails();
     }
 
@@ -1788,8 +1791,6 @@ void SystemInformationImplementation::RunCPUCheck()
     // Now attempt to retrieve the serial number (if possible).
     RetrieveProcessorSerialNumber();
   }
-
-  this->CPUCountWindows();
 
 #elif defined(__APPLE__)
   this->ParseSysCtl();
@@ -4884,12 +4885,15 @@ unsigned char SystemInformationImplementation::GetAPICId()
   return static_cast<unsigned char>((Regs[1] & INITIAL_APIC_ID_BITS) >> 24);
 }
 
-/** Count the number of CPUs. Works only on windows. */
+/** Count Windows CPUs and read caches from the same topology data. */
 void SystemInformationImplementation::CPUCountWindows()
 {
 #if defined(_WIN32)
   this->NumberOfPhysicalCPU = 0;
   this->NumberOfLogicalCPU = 0;
+  this->Features.L1CacheSize = -1;
+  this->Features.L2CacheSize = -1;
+  this->Features.L3CacheSize = -1;
 
   using GetLogicalProcessorInformationType =
     BOOL(WINAPI*)(PSYSTEM_LOGICAL_PROCESSOR_INFORMATION, PDWORD);
@@ -4921,6 +4925,7 @@ void SystemInformationImplementation::CPUCountWindows()
     (void)rc; // Silence unused variable warning
   }
 
+  DWORD_PTR processorMask = 0;
   for (SYSTEM_LOGICAL_PROCESSOR_INFORMATION const& PInfo : ProcInfo) {
     if (PInfo.Relationship != RelationProcessorCore) {
       continue;
@@ -4935,9 +4940,38 @@ void SystemInformationImplementation::CPUCountWindows()
     this->NumberOfPhysicalCPU++;
     this->NumberOfLogicalCPU += (unsigned int)count;
     this->Features.ExtendedFeatures.LogicalProcessorsPerPhysical = count;
+    processorMask |= PInfo.ProcessorMask;
   }
   this->NumberOfPhysicalCPU = std::max(1u, this->NumberOfPhysicalCPU);
   this->NumberOfLogicalCPU = std::max(1u, this->NumberOfLogicalCPU);
+
+  // Report caches visible to the lowest-numbered processor.
+  DWORD_PTR const lowestProcessor = processorMask & (0 - processorMask);
+  DWORD unified[3] = {};
+  DWORD instruction = 0;
+  DWORD data = 0;
+  for (SYSTEM_LOGICAL_PROCESSOR_INFORMATION const& info : ProcInfo) {
+    if (info.Relationship != RelationCache ||
+        (info.ProcessorMask & lowestProcessor) == 0) {
+      continue;
+    }
+    CACHE_DESCRIPTOR const& cache = info.Cache;
+    if (cache.Type == CacheUnified && cache.Level >= 1 && cache.Level <= 3) {
+      DWORD& size = unified[cache.Level - 1];
+      size = std::max(size, cache.Size);
+    } else if (cache.Level == 1 && cache.Type == CacheInstruction) {
+      instruction = std::max(instruction, cache.Size);
+    } else if (cache.Level == 1 && cache.Type == CacheData) {
+      data = std::max(data, cache.Size);
+    }
+  }
+  DWORD const splitL1 = instruction + data;
+  DWORD const l1 = (unified[0] ? unified[0] : splitL1) / 1024;
+  DWORD const l2 = unified[1] / 1024;
+  DWORD const l3 = unified[2] / 1024;
+  this->Features.L1CacheSize = l1 ? static_cast<int>(l1) : -1;
+  this->Features.L2CacheSize = l2 ? static_cast<int>(l2) : -1;
+  this->Features.L3CacheSize = l3 ? static_cast<int>(l3) : -1;
 #else
 #endif
 }
