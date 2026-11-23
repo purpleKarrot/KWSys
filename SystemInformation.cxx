@@ -543,6 +543,7 @@ public:
     Hygon,
     Zhaoxin,
     Apple,
+    Microsoft,
     UnknownManufacturer
   };
 
@@ -2038,6 +2039,8 @@ char const* SystemInformationImplementation::GetVendorID()
       return "Shanghai Zhaoxin Semiconductor Co., Ltd.";
     case Apple:
       return "Apple";
+    case Microsoft:
+      return "Microsoft Corporation";
     case UnknownManufacturer:
     default:
       return "Unknown Manufacturer";
@@ -2425,6 +2428,8 @@ void SystemInformationImplementation::FindManufacturer(
     this->ChipManufacturer = HP; // Hewlett-Packard
   else if (this->ChipID.Vendor == "Apple")
     this->ChipManufacturer = Apple; // Apple
+  else if (this->ChipID.Vendor == "MICROSOFT CORPORATION")
+    this->ChipManufacturer = Microsoft; // Microsoft Corporation
   else
     this->ChipManufacturer = UnknownManufacturer; // Unknown manufacturer
 }
