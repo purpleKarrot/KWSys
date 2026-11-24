@@ -1750,6 +1750,15 @@ void SystemInformationImplementation::RunCPUCheck()
     RetrieveCPUIdentity();
     this->FindManufacturer();
     RetrieveCPUFeatures();
+  } else {
+    WindowsRegistryKey key(
+      L"HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0");
+    if (key) {
+      this->ChipID.ProcessorName = key.ReadString(L"ProcessorNameString");
+      this->ChipID.ModelName = this->ChipID.ProcessorName;
+      this->ChipID.Vendor = key.ReadString(L"VendorIdentifier");
+      this->FindManufacturer();
+    }
   }
 
   // These two may be called without support for the CPUID instruction.
